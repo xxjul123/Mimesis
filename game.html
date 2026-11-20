@@ -6,6 +6,7 @@
     <meta name="theme-color" content="#0b1018">
     <title>MIMESIS | Partida</title>
 
+    <!-- Mismas rutas y mismo orden que index.html: base global → estructura → componentes -->
     <link rel="stylesheet" href="/css/styles.css">
     <link rel="stylesheet" href="/css/layout.css">
     <link rel="stylesheet" href="/css/components.css">
@@ -32,11 +33,19 @@
         * { box-sizing: border-box; }
         body {
             min-height: 100vh;
+            color: var(--text);
             background:
                 radial-gradient(ellipse at 50% -20%, rgba(101,199,181,.09), transparent 55%),
                 var(--background);
         }
-        button { font: inherit; }
+        button { font: inherit; color: var(--text); }
+        a { color: inherit; }
+
+        /* ===== Jerarquía de color de texto (igual que index.html) ===== */
+        h1, h2, h3, h4, strong { color: var(--text); }
+        p, small, label { color: var(--muted); }
+        .eyebrow, .brand-icon { color: var(--accent); }
+
         .game-header {
             height: 72px;
             padding: 0 4%;
@@ -48,8 +57,8 @@
             border-bottom: 1px solid var(--border);
         }
         .brand { display:flex; align-items:center; gap:12px; }
-        .brand-icon { color:var(--accent); font-size:26px; }
-        .brand h1 { font-size:23px; letter-spacing:3px; }
+        .brand-icon { font-size:26px; }
+        .brand h1 { font-size:23px; letter-spacing:3px; color:var(--text); }
         .brand span { display:block; color:var(--muted); font-size:9px; letter-spacing:2px; }
         .header-status { color:var(--muted); font-size:12px; }
         .header-status strong { color:var(--accent); }
@@ -63,10 +72,10 @@
             gap:16px; margin-bottom:22px;
         }
         .eyebrow {
-            color:var(--accent); font-size:10px; letter-spacing:2px;
+            font-size:10px; letter-spacing:2px;
             text-transform:uppercase; font-weight:700;
         }
-        .game-welcome h2 { margin-top:7px; font-size:clamp(22px,3vw,31px); }
+        .game-welcome h2 { margin-top:7px; font-size:clamp(22px,3vw,31px); color:var(--text); }
         .game-welcome p { color:var(--muted); margin-top:7px; font-size:13px; }
         .round-pill {
             flex:0 0 auto; border:1px solid var(--border); background:var(--surface);
@@ -80,12 +89,13 @@
         .panel {
             min-width:0; background:linear-gradient(160deg,rgba(25,37,53,.98),rgba(17,26,39,.98));
             border:1px solid var(--border); border-radius:12px; padding:19px;
+            color:var(--text);
         }
         .panel-heading {
             display:flex; align-items:center; justify-content:space-between;
             gap:12px; margin-bottom:15px;
         }
-        .panel-heading h3 { font-size:14px; }
+        .panel-heading h3 { font-size:14px; color:var(--text); }
         .live-indicator {
             display:inline-flex; align-items:center; gap:7px; color:var(--muted);
             font-size:10px; text-transform:uppercase; letter-spacing:1px;
@@ -104,16 +114,16 @@
             z-index:1; max-width:360px; padding:25px; text-align:center;
             color:var(--muted);
         }
-        .camera-placeholder .camera-icon { font-size:42px; margin-bottom:12px; }
+        .camera-placeholder .camera-icon { font-size:42px; margin-bottom:12px; color:var(--accent); }
         .camera-placeholder strong { display:block; color:var(--text); font-size:15px; margin-bottom:7px; }
-        .camera-placeholder p { font-size:12px; line-height:1.6; }
+        .camera-placeholder p { font-size:12px; line-height:1.6; color:var(--muted); }
         .camera-hud {
             position:absolute; z-index:2; inset:14px; pointer-events:none;
             display:flex; justify-content:space-between; align-items:flex-start;
         }
         .hud-tag {
             padding:7px 10px; border-radius:6px; background:rgba(5,10,16,.72);
-            color:#dce6ed; font-size:10px; letter-spacing:.5px;
+            color:var(--text); font-size:10px; letter-spacing:.5px;
         }
         .hud-corners {
             position:absolute; inset:12%; border:1px solid rgba(101,199,181,.3);
@@ -127,7 +137,7 @@
         .countdown {
             position:absolute; z-index:4; inset:0; display:none; place-items:center;
             background:rgba(4,9,15,.35); font-size:clamp(70px,14vw,130px);
-            font-weight:800; color:white; text-shadow:0 4px 30px #000;
+            font-weight:800; color:var(--text); text-shadow:0 4px 30px #000;
         }
         .countdown.visible { display:grid; }
         .camera-actions {
@@ -136,7 +146,7 @@
         .action-btn {
             border:1px solid var(--border); border-radius:7px; padding:12px 17px;
             color:var(--text); background:var(--surface-light); font-size:12px;
-            font-weight:700; transition:.2s;
+            font-weight:700; transition:.2s; cursor:pointer;
         }
         .action-btn:hover:not(:disabled) { border-color:var(--accent); transform:translateY(-1px); }
         .action-btn.primary { background:var(--accent); color:var(--accent-contrast); border-color:var(--accent); }
@@ -153,13 +163,14 @@
             border-radius:50%; background:#30445a; color:var(--accent); font-weight:800;
         }
         .current-player small { display:block; color:var(--muted); font-size:10px; margin-bottom:4px; }
-        .current-player strong { font-size:13px; }
+        .current-player strong { font-size:13px; color:var(--text); }
         .player-list { display:flex; flex-direction:column; gap:8px; margin-top:13px; }
         .player-row {
             display:flex; align-items:center; gap:9px; padding:9px;
             border:1px solid transparent; border-radius:8px; background:rgba(28,40,56,.65);
+            color:var(--muted);
         }
-        .player-row.active { border-color:var(--accent); background:rgba(101,199,181,.08); }
+        .player-row.active { border-color:var(--accent); background:rgba(101,199,181,.08); color:var(--text); }
         .player-row .mini-avatar {
             width:27px; height:27px; border-radius:50%; display:grid; place-items:center;
             background:#30445a; color:var(--accent); font-size:10px; font-weight:700;
@@ -171,22 +182,24 @@
             width:100%; height:145px; object-fit:cover; display:block;
             border-radius:8px; margin-bottom:12px; background:var(--surface-light);
         }
-        .sculpture-meta h4 { font-size:14px; line-height:1.4; }
+        .sculpture-meta h4 { font-size:14px; line-height:1.4; color:var(--text); }
         .sculpture-meta p { color:var(--muted); font-size:10px; margin-top:5px; }
         .emotion-chip {
             display:inline-block; margin-top:10px; padding:7px 10px; border-radius:6px;
             background:rgba(101,199,181,.1); color:var(--accent); font-size:10px;
         }
         .instructions { color:var(--muted); font-size:11px; line-height:1.7; padding-left:17px; }
+        .instructions li { color:var(--muted); }
         .instructions li + li { margin-top:6px; }
         .progress-wrap { margin-top:17px; }
         .progress-label { display:flex; justify-content:space-between; color:var(--muted); font-size:10px; margin-bottom:8px; }
+        .progress-label strong { color:var(--accent); }
         .progress-track { height:6px; background:#0c141e; border-radius:20px; overflow:hidden; }
         .progress-fill { height:100%; width:0%; background:var(--accent); border-radius:20px; transition:width .3s; }
         .result-panel { display:none; margin-top:18px; }
         .result-panel.visible { display:block; }
         .result-top { display:flex; justify-content:space-between; gap:12px; align-items:center; }
-        .result-top h3 { font-size:15px; }
+        .result-top h3 { font-size:15px; color:var(--text); }
         .status-label { color:var(--warning); font-size:10px; }
         .result-content {
             margin-top:12px; padding:14px; background:var(--surface-light);
@@ -205,6 +218,43 @@
             border-radius:8px; color:var(--text); font-size:12px; box-shadow:0 12px 35px #0006;
         }
         .toast.show { display:block; }
+
+        /* FASE 4: procesamiento y resultados */
+        .processing-box { display:none; margin-top:16px; padding:15px; border:1px solid rgba(101,199,181,.35); border-radius:9px; background:rgba(101,199,181,.06); }
+        .processing-box.visible { display:flex; align-items:center; gap:13px; }
+        .processing-spinner { width:25px; height:25px; flex:0 0 25px; border:3px solid #365064; border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+        .processing-copy strong { display:block; font-size:12px; color:var(--text); }
+        .processing-copy span { display:block; margin-top:4px; color:var(--muted); font-size:10px; }
+        .analysis-button { margin-top:14px; width:100%; }
+        .results-layout { display:grid; grid-template-columns:1fr 1fr; gap:13px; margin-top:15px; }
+        .visual-card { min-width:0; padding:11px; background:#0d1621; border:1px solid var(--border); border-radius:9px; }
+        .visual-card h4 { font-size:11px; margin-bottom:9px; color:var(--text); }
+        .visual-stage { position:relative; aspect-ratio:4/3; overflow:hidden; border-radius:6px; background:#080e16; }
+        .visual-stage img { width:100%; height:100%; object-fit:contain; display:block; }
+        .visual-stage svg { position:absolute; inset:0; width:100%; height:100%; }
+        .visual-placeholder { display:grid; place-items:center; height:100%; min-height:130px; color:var(--muted); text-align:center; font-size:10px; padding:12px; }
+        .score-row { display:flex; align-items:center; gap:17px; margin-top:16px; padding:15px; border-radius:9px; background:var(--surface-light); }
+        .score-circle { width:76px; height:76px; flex:0 0 76px; display:grid; place-items:center; border-radius:50%; border:5px solid #35485a; color:var(--muted); font-size:20px; font-weight:800; }
+        .score-circle.available { border-color:var(--accent); color:var(--accent); }
+        .score-copy strong { display:block; font-size:13px; color:var(--text); }
+        .score-copy span { display:block; margin-top:5px; color:var(--muted); font-size:10px; line-height:1.5; }
+        .heatmap { margin-top:16px; }
+        .heatmap h4 { font-size:12px; margin-bottom:12px; color:var(--text); }
+        .heat-row { display:grid; grid-template-columns:90px 1fr 38px; align-items:center; gap:9px; margin:9px 0; }
+        .heat-row span { color:var(--muted); font-size:10px; }
+        .heat-track { height:8px; overflow:hidden; border-radius:10px; background:#263444; }
+        .heat-fill { height:100%; width:0; border-radius:10px; background:linear-gradient(90deg,#d66a58,#e8b85c,#65c7b5); transition:width .35s; }
+        .heat-row strong { text-align:right; font-size:10px; color:var(--text); }
+        .cultural-box { margin-top:15px; padding:14px; border:1px solid var(--border); border-radius:9px; }
+        .cultural-box h4 { font-size:12px; margin-bottom:8px; color:var(--text); }
+        .cultural-box p { color:var(--muted); font-size:11px; line-height:1.7; }
+        .integration-note { margin-top:12px; color:var(--muted); font-size:10px; line-height:1.6; }
+        .status-label.error { color:var(--danger); }
+        .status-label.ready { color:var(--accent); }
+        .result-panel .camera-actions { margin-top:15px; }
+        @media (max-width:720px) { .results-layout { grid-template-columns:1fr; } }
+
         @media (max-width:950px) {
             .game-grid { grid-template-columns:minmax(0,1fr) 270px; }
             .camera-frame { min-height:320px; }
@@ -235,7 +285,7 @@
     <header class="game-header">
         <a class="brand" href="index.html" aria-label="Volver al inicio de MIMESIS" style="text-decoration:none;color:inherit">
             <div class="brand-icon">◈</div>
-            <div><h1>MIMESIS</h1><span>MUSEO INTERACTIVO</span></div>
+            <div><h1>MIMESIS</h1><span>EL ARTE COBRA VIDA</span></div>
         </a>
         <div class="header-status">SESIÓN ACTIVA <strong>●</strong></div>
         <a href="index.html" class="action-btn" style="text-decoration:none">Salir de la partida</a>
@@ -283,12 +333,41 @@
 
                 <section class="panel result-panel" id="result-panel" aria-live="polite">
                     <div class="result-top">
-                        <h3>Resultado del intento</h3>
-                        <span class="status-label">Integración pendiente</span>
+                        <h3>Análisis de tu pose</h3>
+                        <span class="status-label" id="analysis-status">Fotografía lista</span>
                     </div>
-                    <div class="result-content" id="result-message">
-                        La fotografía está lista. El análisis de pose y la puntuación se mostrarán aquí cuando se conecte el servicio de Python (MediaPipe + modelo de clasificación).
+                    <div class="result-content" id="result-message">La captura se ha realizado correctamente. Inicia el análisis cuando el servicio esté disponible.</div>
+                    <div class="processing-box" id="processing-box" role="status">
+                        <div class="processing-spinner"></div>
+                        <div class="processing-copy"><strong id="processing-title">Analizando postura…</strong><span id="processing-detail">Enviando fotografía para estimación corporal.</span></div>
                     </div>
+                    <button class="action-btn primary analysis-button" id="analyze-btn" type="button">Procesar fotografía</button>
+                    <div class="results-layout">
+                        <div class="visual-card">
+                            <h4>Tu fotografía · Esqueleto detectado</h4>
+                            <div class="visual-stage" id="player-result-stage"><div class="visual-placeholder">El esqueleto se dibujará aquí cuando el analizador devuelva los puntos corporales.</div></div>
+                        </div>
+                        <div class="visual-card">
+                            <h4>Pose de referencia</h4>
+                            <div class="visual-stage"><img id="reference-result-image" alt="Obra de referencia"></div>
+                            <div class="integration-note" id="reference-pose-note">La obra seleccionada sirve como referencia visual. La pose de referencia estimada podrá superponerse cuando el servicio entregue sus puntos clave.</div>
+                        </div>
+                    </div>
+                    <div class="score-row">
+                        <div class="score-circle" id="score-value">—</div>
+                        <div class="score-copy"><strong id="score-title">Similitud pendiente</strong><span id="score-description">No se ha recibido una evaluación. No se muestra una puntuación hasta conectar el modelo de análisis.</span></div>
+                    </div>
+                    <div class="heatmap">
+                        <h4>Mapa de calor por regiones corporales</h4>
+                        <div id="heatmap-regions">
+                            <div class="heat-row"><span>Cabeza</span><div class="heat-track"><div class="heat-fill"></div></div><strong>—</strong></div>
+                            <div class="heat-row"><span>Torso</span><div class="heat-track"><div class="heat-fill"></div></div><strong>—</strong></div>
+                            <div class="heat-row"><span>Brazos</span><div class="heat-track"><div class="heat-fill"></div></div><strong>—</strong></div>
+                            <div class="heat-row"><span>Piernas</span><div class="heat-track"><div class="heat-fill"></div></div><strong>—</strong></div>
+                        </div>
+                    </div>
+                    <div class="cultural-box"><h4>Contexto de la obra</h4><p id="cultural-description">Información cultural de la escultura seleccionada.</p></div>
+                    <p class="integration-note">Contrato de integración preparado: fotografía JPEG enviada como multipart/form-data al endpoint configurado. El servicio deberá devolver puntuación, landmarks y métricas por región.</p>
                     <div class="camera-actions" style="justify-content:flex-end">
                         <button class="action-btn primary" id="next-player-btn" type="button">Siguiente jugador →</button>
                     </div>
@@ -369,8 +448,12 @@
             game.currentPlayer = Number.isInteger(game.currentPlayer) ? game.currentPlayer : 0;
             game.round = Number.isInteger(game.round) ? game.round : 1;
 
+            // Cambiar esta ruta cuando se publique el endpoint del servicio Python.
+            const ANALYSIS_ENDPOINT = "/api/analysis/pose";
             let stream = null;
             let captured = false;
+            let capturedBlob = null;
+            let lastAnalysis = null;
             let countdownTimer = null;
             let toastTimer = null;
 
@@ -398,6 +481,8 @@
                 $("sculpture-emotion").textContent = `◈ ${sculpture.emotion || "Interpretación"}`;
                 $("sculpture-image").src = sculpture.image || "";
                 $("sculpture-image").alt = sculpture.title || "Escultura seleccionada";
+                $("reference-result-image").src = sculpture.image || "";
+                $("cultural-description").textContent = sculpture.description || "No se ha proporcionado una descripción cultural para esta obra.";
 
                 $("player-list").innerHTML = "";
                 game.players.forEach((p, index) => {
@@ -500,22 +585,162 @@
                 context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
                 $("captured-image").src = canvas.toDataURL("image/jpeg", 0.9);
+                canvas.toBlob(blob => { capturedBlob = blob; }, "image/jpeg", 0.9);
                 $("captured-image").hidden = false;
                 video.hidden = true;
                 $("camera-hud").hidden = true;
                 captured = true;
+                lastAnalysis = null;
                 $("camera-status").textContent = "Fotografía capturada";
                 $("camera-btn").disabled = false;
                 $("capture-btn").disabled = true;
                 $("retake-btn").hidden = false;
                 $("result-panel").classList.add("visible");
-                $("result-message").innerHTML =
-                    "<strong>Captura completada.</strong> La imagen está lista para enviarse al servicio de análisis. La puntuación, el esqueleto y el mapa de calor aparecerán cuando se integre el backend de Python (MediaPipe + modelo MLP).";
+                resetAnalysisView();
+                $("result-message").textContent = "Captura completada. Puedes solicitar el procesamiento; el envío está preparado, pero requiere que el servicio Python esté ejecutándose.";
                 $("result-panel").scrollIntoView({ behavior: "smooth", block: "nearest" });
+            }
+
+            function resetAnalysisView() {
+                $("analysis-status").textContent = "Fotografía lista";
+                $("analysis-status").className = "status-label";
+                $("processing-box").classList.remove("visible");
+                $("analyze-btn").disabled = false;
+                $("analyze-btn").textContent = "Procesar fotografía";
+                $("score-value").textContent = "—";
+                $("score-value").classList.remove("available");
+                $("score-title").textContent = "Similitud pendiente";
+                $("score-description").textContent = "No se ha recibido una evaluación. No se muestra una puntuación hasta conectar el modelo de análisis.";
+                $("player-result-stage").innerHTML = '<div class="visual-placeholder">El esqueleto se dibujará aquí cuando el analizador devuelva los puntos corporales.</div>';
+                renderHeatmap(null);
+            }
+
+            // Conexiones principales del índice de 33 landmarks de MediaPipe Pose.
+            const skeletonConnections = [
+                [0,7],[0,8],[7,11],[8,12],[11,12],
+                [11,13],[13,15],[15,17],[15,19],[15,21],
+                [12,14],[14,16],[16,18],[16,20],[16,22],
+                [11,23],[12,24],[23,24],
+                [23,25],[25,27],[27,29],[27,31],
+                [24,26],[26,28],[28,30],[28,32]
+            ];
+
+            function drawPoseOverlay(container, imageUrl, landmarks) {
+                container.innerHTML = "";
+                const img = document.createElement("img");
+                img.src = imageUrl;
+                img.alt = "Fotografía capturada con puntos corporales detectados";
+                container.appendChild(img);
+                if (!Array.isArray(landmarks) || !landmarks.length) return;
+                const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                svg.setAttribute("viewBox", "0 0 1 1");
+                svg.setAttribute("preserveAspectRatio", "none");
+                skeletonConnections.forEach(([a,b]) => {
+                    if (!landmarks[a] || !landmarks[b]) return;
+                    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                    line.setAttribute("x1", landmarks[a].x); line.setAttribute("y1", landmarks[a].y);
+                    line.setAttribute("x2", landmarks[b].x); line.setAttribute("y2", landmarks[b].y);
+                    line.setAttribute("stroke", "#65c7b5"); line.setAttribute("stroke-width", ".006");
+                    line.setAttribute("stroke-linecap", "round"); svg.appendChild(line);
+                });
+                landmarks.forEach(point => {
+                    if (typeof point.x !== "number" || typeof point.y !== "number") return;
+                    const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                    dot.setAttribute("cx", point.x); dot.setAttribute("cy", point.y); dot.setAttribute("r", ".009");
+                    dot.setAttribute("fill", "#f1f4f8"); dot.setAttribute("stroke", "#65c7b5"); dot.setAttribute("stroke-width", ".003");
+                    svg.appendChild(dot);
+                });
+                container.appendChild(svg);
+            }
+
+            function renderHeatmap(regions) {
+                const labels = { head: "Cabeza", torso: "Torso", arms: "Brazos", legs: "Piernas" };
+                const host = $("heatmap-regions");
+                host.innerHTML = "";
+                Object.entries(labels).forEach(([key,label]) => {
+                    const raw = regions && regions[key];
+                    const value = typeof raw === "number" ? raw : (raw && typeof raw.similarity === "number" ? raw.similarity : null);
+                    const row = document.createElement("div"); row.className = "heat-row";
+                    const name = document.createElement("span"); name.textContent = label;
+                    const track = document.createElement("div"); track.className = "heat-track";
+                    const fill = document.createElement("div"); fill.className = "heat-fill";
+                    if (value !== null) fill.style.width = `${Math.max(0,Math.min(100,value))}%`;
+                    track.appendChild(fill);
+                    const number = document.createElement("strong"); number.textContent = value === null ? "—" : `${Math.round(value)}%`;
+                    row.append(name,track,number); host.appendChild(row);
+                });
+            }
+
+            function applyAnalysisResult(data) {
+                if (!data || typeof data !== "object") throw new Error("El servicio devolvió una respuesta vacía o inválida.");
+                const score = Number(data.score ?? data.similarity);
+                if (Number.isFinite(score) && score >= 0 && score <= 100) {
+                    $("score-value").textContent = `${Math.round(score)}`;
+                    $("score-value").classList.add("available");
+                    $("score-title").textContent = "Similitud de la pose";
+                    $("score-description").textContent = data.feedback || "Puntuación recibida del servicio de análisis.";
+                }
+                const playerImage = data.annotated_image || data.image_with_skeleton || $("captured-image").src;
+                if (Array.isArray(data.landmarks)) drawPoseOverlay($("player-result-stage"), playerImage, data.landmarks);
+                else if (data.annotated_image || data.image_with_skeleton) {
+                    $("player-result-stage").innerHTML = "";
+                    const image = document.createElement("img"); image.src = playerImage; image.alt = "Fotografía con esqueleto superpuesto";
+                    $("player-result-stage").appendChild(image);
+                }
+                if (Array.isArray(data.reference_landmarks)) {
+                    const note = $("reference-pose-note");
+                    note.textContent = "El servicio devolvió los puntos clave de la pose de referencia.";
+                }
+                renderHeatmap(data.regions || data.heatmap || null);
+                $("analysis-status").textContent = "Análisis recibido";
+                $("analysis-status").className = "status-label ready";
+                $("result-message").textContent = data.message || "El servicio procesó la fotografía y devolvió resultados.";
+                lastAnalysis = data;
+            }
+
+            async function processCapture() {
+                if (!captured) return;
+                if (!capturedBlob) {
+                    notify("La fotografía todavía se está preparando. Inténtalo de nuevo.");
+                    return;
+                }
+                const button = $("analyze-btn");
+                button.disabled = true;
+                $("processing-box").classList.add("visible");
+                $("processing-title").textContent = "Analizando postura…";
+                $("processing-detail").textContent = "Enviando fotografía al servicio de estimación corporal.";
+                $("analysis-status").textContent = "Procesando";
+                $("result-message").textContent = "La imagen se está enviando. Espera la respuesta del analizador.";
+                try {
+                    const form = new FormData();
+                    form.append("image", capturedBlob, "mimesis-capture.jpg");
+                    form.append("player", currentPlayer().name || `Jugador ${game.currentPlayer + 1}`);
+                    form.append("sculpture", JSON.stringify(game.sculpture || fallbackGame.sculpture));
+                    form.append("round", String(game.round));
+                    const response = await fetch(ANALYSIS_ENDPOINT, { method: "POST", body: form });
+                    if (!response.ok) throw new Error(`El servicio respondió HTTP ${response.status}.`);
+                    const data = await response.json();
+                    applyAnalysisResult(data);
+                } catch (error) {
+                    console.warn("No se pudo completar el análisis:", error);
+                    $("analysis-status").textContent = "Servicio no disponible";
+                    $("analysis-status").className = "status-label error";
+                    $("result-message").textContent = `La fotografía se capturó correctamente, pero no fue posible obtener el análisis: ${error.message} Comprueba que el backend esté iniciado y que ANALYSIS_ENDPOINT apunte a su ruta. La captura se conserva y puedes continuar.`;
+                    $("processing-title").textContent = "No se pudo conectar con el analizador";
+                    $("processing-detail").textContent = "La interfaz y el envío están preparados; falta desplegar el servicio Python.";
+                    notify("No hay un servicio de análisis disponible. La captura se conservó.");
+                } finally {
+                    $("processing-box").classList.remove("visible");
+                    button.disabled = false;
+                    button.textContent = lastAnalysis ? "Volver a procesar" : "Reintentar procesamiento";
+                }
             }
 
             function retake() {
                 captured = false;
+                capturedBlob = null;
+                lastAnalysis = null;
+                resetAnalysisView();
                 $("captured-image").hidden = true;
                 $("camera-video").hidden = false;
                 $("camera-hud").hidden = false;
@@ -541,7 +766,10 @@
                 }
                 sessionStorage.setItem("mimesisGame", JSON.stringify(game));
                 captured = false;
+                capturedBlob = null;
+                lastAnalysis = null;
                 $("captured-image").hidden = true;
+                resetAnalysisView();
                 $("result-panel").classList.remove("visible");
                 if (stream) {
                     $("camera-video").hidden = false;
@@ -564,6 +792,7 @@
             $("camera-btn").addEventListener("click", () => stream ? stopCamera() : startCamera());
             $("capture-btn").addEventListener("click", beginCapture);
             $("retake-btn").addEventListener("click", retake);
+            $("analyze-btn").addEventListener("click", processCapture);
             $("next-player-btn").addEventListener("click", nextPlayer);
             $("back-button").addEventListener("click", () => {
                 stopCamera();
