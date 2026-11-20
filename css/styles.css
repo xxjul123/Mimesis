@@ -1,0 +1,45 @@
+/* ==========================================================
+   styles.css
+   Base global: variables, reset, tipografía y utilidades
+   ========================================================== */
+
+:root {
+    --background: #0b1018;
+    --surface: #141d2a;
+    --surface-light: #1c2838;
+    --border: #29374a;
+    --text: #f1f4f8;
+    --muted: #91a0b4;
+    --accent: #65c7b5;
+    --accent-hover: #80dfcc;
+    --accent-contrast: #10221f;
+    --danger: #ff8585;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Inter, "Segoe UI", sans-serif;
+    background: var(--background);
+    color: var(--text);
+    min-height: 100vh;
+}
+
+button,
+input {
+    font: inherit;
+}
+
+button {
+    cursor: pointer;
+}
+
+/* Utilidades */
+
+.muted {
+    color: var(--muted);
+}

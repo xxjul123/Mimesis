@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0b1018">
+    <title>MIMESIS | Museo interactivo</title>
+
+    <!-- Orden: base global → estructura → componentes -->
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/layout.css">
+    <link rel="stylesheet" href="/css/components.css">
+</head>
+
+<body>
+
+<header>
+    <div class="brand">
+        <div class="brand-icon">◈</div>
+        <div>
+            <h1>MIMESIS</h1>
+            <span>EL ARTE COBRA VIDA</span>
+        </div>
+    </div>
+
+    <nav>
+        <a href="#" class="active">Inicio</a>
+        <a href="#gallery">Explorar</a>
+        <a href="#players">Jugadores</a>
+        <a href="#ranking">Ranking</a>
+    </nav>
+
+    <div class="profile">◉ &nbsp; Invitado</div>
+</header>
+
+<main>
+
+    <section class="welcome">
+        <div>
+            <small>EXPERIENCIA INTERACTIVA</small>
+            <h2>La próxima obra sois vosotros.</h2>
+            <p>Elige una escultura, prepara tu pose y demuestra cuánto puedes imitarla.</p>
+        </div>
+
+        <div class="round-info">
+            PARTICIPANTES &nbsp; <strong id="player-counter">2 / 4</strong>
+        </div>
+    </section>
+
+    <section class="dashboard">
+
+        <!-- JUGADORES -->
+
+        <aside class="panel" id="players">
+
+            <div class="panel-title">
+                <strong>Participantes</strong>
+
+                <div class="player-count">
+                    <button class="count-option" data-count="2">2</button>
+                    <button class="count-option active" data-count="3">3</button>
+                    <button class="count-option" data-count="4">4</button>
+                </div>
+            </div>
+
+            <div class="players-list" id="players-list"></div>
+
+            <button class="add-player" id="add-player">
+                + Agregar jugador
+            </button>
+
+            <p class="player-help">
+                La partida requiere mínimo 2 y máximo 4 participantes.
+                Cada jugador tendrá su propio turno.
+            </p>
+
+        </aside>
+
+        <!-- ESCULTURA PRINCIPAL -->
+
+        <section class="sculpture-card">
+
+            <img
+                id="main-image"
+                src="https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=1200"
+                alt="Escultura artística"
+            >
+
+            <div class="sculpture-overlay"></div>
+
+            <div class="featured-label">
+                ◈ &nbsp; OBRA DESTACADA
+            </div>
+
+            <div class="sculpture-description">
+                <small>COLECCIÓN MIMESIS</small>
+                <h3 id="main-title">El hombre que marcha I</h3>
+                <p id="main-subtitle">
+                    Una postura que desafía el equilibrio y el movimiento.
+                </p>
+            </div>
+
+        </section>
+
+        <!-- INFORMACIÓN DE OBRA -->
+
+        <aside class="panel info-panel">
+
+            <span class="info-label">Ficha de la escultura</span>
+
+            <h3 id="info-title">El hombre que marcha I</h3>
+
+            <p class="author" id="info-author">
+                Alberto Giacometti · 1960
+            </p>
+
+            <span class="info-label">Emoción asociada</span>
+
+            <div class="emotion" id="info-emotion">
+                ◈ &nbsp; Determinación
+            </div>
+
+            <p class="info-description" id="info-description">
+                Una representación de la figura humana en movimiento.
+                Su postura transmite fuerza, perseverancia y determinación.
+            </p>
+
+            <div class="info-instructions">
+                <span class="info-label">Instrucciones</span>
+                <p class="info-description">
+                    Observa cuidadosamente la escultura. Identifica la
+                    inclinación del torso, la posición de los brazos
+                    y la distribución del peso corporal.
+                </p>
+            </div>
+
+        </aside>
+
+    </section>
+
+    <!-- GALERÍA -->
+
+    <section class="gallery-section" id="gallery">
+
+        <div class="gallery-header">
+            <h3>Explorar la colección</h3>
+            <span>Selecciona una obra para visualizarla</span>
+        </div>
+
+        <div class="gallery" id="gallery-list"></div>
+
+    </section>
+
+    <!-- FOOTER -->
+
+    <footer class="bottom-bar">
+
+        <p>
+            ◉ &nbsp; La experiencia requiere una cámara web para
+            capturar las poses de los participantes.
+        </p>
+
+        <button class="start-button" id="start-game">
+            Iniciar partida &nbsp; →
+        </button>
+
+    </footer>
+
+</main>
+
+<div class="notification" id="notification"></div>
+
+<script>
+
+    // DATOS DE JUGADORES
+
+    let players = [
+        { name: "Mateo" },
+        { name: "Ana" }
+    ];
+
+    // COLECCIÓN DE ESCULTURAS
+
+    const sculptures = [
+        {
+            title: "El hombre que marcha I",
+            author: "Alberto Giacometti · 1960",
+            emotion: "Determinación",
+            description: "Una representación de la figura humana en movimiento. Su postura transmite fuerza, perseverancia y determinación.",
+            subtitle: "Una postura que desafía el equilibrio y el movimiento.",
+            image: "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=1200"
+        },
+        {
+            title: "El pensador",
+            author: "Auguste Rodin · 1904",
+            emotion: "Reflexión",
+            description: "Una figura concentrada en sus pensamientos, cuya postura transmite introspección y esfuerzo intelectual.",
+            subtitle: "El cuerpo como representación del pensamiento.",
+            image: "https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?w=1200"
+        },
+        {
+            title: "Victoria alada",
+            author: "Atribuida a Pitócrito · Siglo II a. C.",
+            emotion: "Triunfo",
+            description: "Una figura que representa el movimiento, la victoria y la energía.",
+            subtitle: "El movimiento convertido en arte.",
+            image: "https://images.unsplash.com/photo-1561839561-b13bcfe95249?w=1200"
+        },
+        {
+            title: "Figura clásica",
+            author: "Colección artística",
+            emotion: "Serenidad",
+            description: "Una figura de inspiración clásica que transmite equilibrio y armonía.",
+            subtitle: "Equilibrio y proporción en la figura humana.",
+            image: "https://images.unsplash.com/photo-1578301978693-85fa9c0320b9?w=1200"
+        },
+        {
+            title: "La forma humana",
+            author: "Colección MIMESIS",
+            emotion: "Contemplación",
+            description: "Una exploración artística de la anatomía y la expresión corporal.",
+            subtitle: "Descubre la expresión del cuerpo.",
+            image: "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=1200"
+        }
+    ];
+
+    let selectedSculpture = 0;
+
+    // ELEMENTOS HTML
+
+    const playersList = document.getElementById("players-list");
+    const galleryList = document.getElementById("gallery-list");
+
+    // NOTIFICACIONES
+
+    function notify(message) {
+        const notification = document.getElementById("notification");
+
+        notification.textContent = message;
+        notification.style.display = "block";
+
+        setTimeout(() => {
+            notification.style.display = "none";
+        }, 2500);
+    }
+
+    // RENDERIZAR JUGADORES
+
+    function renderPlayers() {
+
+        playersList.innerHTML = "";
+
+        players.forEach((player, index) => {
+
+            const element = document.createElement("div");
+            element.className = "player";
+
+            const avatar = document.createElement("div");
+            avatar.className = "avatar";
+            avatar.textContent = player.name.charAt(0).toUpperCase();
+
+            const nameContainer = document.createElement("div");
+            nameContainer.className = "player-name";
+
+            const name = document.createElement("strong");
+            name.textContent = player.name;
+
+            const role = document.createElement("small");
+            role.textContent = `Jugador ${index + 1}`;
+
+            nameContainer.append(name, role);
+
+            const remove = document.createElement("button");
+            remove.className = "remove-player";
+            remove.textContent = "×";
+            remove.setAttribute("aria-label", `Eliminar ${player.name}`);
+
+            remove.addEventListener("click", () => {
+                if (players.length <= 2) {
+                    notify("Se necesitan mínimo 2 jugadores.");
+                    return;
+                }
+
+                players.splice(index, 1);
+                renderPlayers();
+            });
+
+            element.append(avatar, nameContainer, remove);
+            playersList.appendChild(element);
+
+        });
+
+        document.getElementById("player-counter").textContent =
+            `${players.length} / 4`;
+
+        document.getElementById("add-player").disabled =
+            players.length >= 4;
+
+        document.querySelectorAll(".count-option").forEach(button => {
+            button.classList.toggle(
+                "active",
+                Number(button.dataset.count) === players.length
+            );
+        });
+    }
+
+    // AGREGAR JUGADORES
+
+    document.getElementById("add-player").addEventListener("click", () => {
+
+        if (players.length >= 4) {
+            notify("Máximo 4 participantes.");
+            return;
+        }
+
+        const name = prompt("Nombre del nuevo participante:");
+
+        if (!name || !name.trim()) return;
+
+        players.push({ name: name.trim() });
+
+        renderPlayers();
+    });
+
+    // SELECTOR DE CANTIDAD
+
+    document.querySelectorAll(".count-option").forEach(button => {
+
+        button.addEventListener("click", () => {
+
+            const count = Number(button.dataset.count);
+
+            while (players.length < count) {
+                players.push({ name: `Jugador ${players.length + 1}` });
+            }
+
+            while (players.length > count) {
+                players.pop();
+            }
+
+            renderPlayers();
+        });
+
+    });
+
+    // RENDERIZAR GALERÍA
+
+    function renderGallery() {
+
+        galleryList.innerHTML = "";
+
+        sculptures.forEach((sculpture, index) => {
+
+            const card = document.createElement("article");
+            card.className = "gallery-item";
+
+            if (index === selectedSculpture) {
+                card.classList.add("selected");
+            }
+
+            const image = document.createElement("img");
+            image.src = sculpture.image;
+            image.alt = sculpture.title;
+            image.loading = "lazy";
+
+            const details = document.createElement("div");
+
+            const title = document.createElement("strong");
+            title.textContent = sculpture.title;
+
+            const author = document.createElement("small");
+            author.textContent = sculpture.author;
+
+            details.append(title, author);
+            card.append(image, details);
+
+            card.addEventListener("click", () => {
+                selectSculpture(index);
+            });
+
+            galleryList.appendChild(card);
+
+        });
+
+    }
+
+    // SELECCIONAR ESCULTURA
+
+    function selectSculpture(index) {
+
+        selectedSculpture = index;
+
+        const sculpture = sculptures[index];
+
+        document.getElementById("main-image").src = sculpture.image;
+        document.getElementById("main-title").textContent = sculpture.title;
+        document.getElementById("main-subtitle").textContent = sculpture.subtitle;
+
+        document.getElementById("info-title").textContent = sculpture.title;
+        document.getElementById("info-author").textContent = sculpture.author;
+
+        document.getElementById("info-emotion").textContent =
+            "◈  " + sculpture.emotion;
+
+        document.getElementById("info-description").textContent =
+            sculpture.description;
+
+        renderGallery();
+    }
+
+    // INICIAR PARTIDA
+
+    document.getElementById("start-game").addEventListener("click", () => {
+
+        if (players.length < 2 || players.length > 4) {
+            notify("La partida requiere entre 2 y 4 jugadores.");
+            return;
+        }
+
+        const gameData = {
+            players: players,
+            sculpture: sculptures[selectedSculpture],
+            currentPlayer: 0,
+            round: 1
+        };
+
+        sessionStorage.setItem(
+            "mimesisGame",
+            JSON.stringify(gameData)
+        );
+
+        notify("¡Configuración lista! Preparando partida...");
+
+        window.location.href = "game.html";
+
+        console.log("Partida configurada:", gameData);
+
+    });
+
+    // INICIALIZACIÓN
+
+    renderPlayers();
+    renderGallery();
+
+</script>
+
+</body>
+</html>
