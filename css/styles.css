@@ -1,45 +1,106 @@
 /* ==========================================================
    styles.css
-   Base global: variables, reset, tipografía y utilidades
+   Sistema visual editorial de MIMESIS (galería oscura cálida)
    ========================================================== */
 
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=DM+Sans:wght@400;500;600;700&display=swap");
+
 :root {
-    --background: #0b1018;
-    --surface: #141d2a;
-    --surface-light: #1c2838;
-    --border: #29374a;
-    --text: #f1f4f8;
-    --muted: #91a0b4;
-    --accent: #65c7b5;
-    --accent-hover: #80dfcc;
-    --accent-contrast: #10221f;
-    --danger: #ff8585;
+    /* Superficies piedra / carbón cálido */
+    --bg: #12110f;
+    --bg-elevated: #181613;
+    --surface: #1e1b18;
+    --surface-soft: #26221e;
+    --border: #332e28;
+    --border-strong: #4a4239;
+
+    /* Tipografía */
+    --ink: #f3eee6;
+    --ink-secondary: #c4bbb0;
+    --muted: #8f867b;
+
+    /* Acento museográfico (bronce / terracota) */
+    --accent: #c88d55;
+    --accent-hover: #da9f66;
+    --accent-ink: #17120d;
+    --accent-soft: rgba(200, 141, 85, 0.12);
+
+    /* Semántica de evaluación por zonas */
+    --score-high: #6ea884;
+    --score-mid: #d6a44e;
+    --score-low: #c96857;
+    --score-na: #6f6962;
+
+    /* Fuentes y radios */
+    --font-display: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+    --font-sans: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
 }
 
-* {
+*,
+*::before,
+*::after {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
+html {
+    scroll-behavior: smooth;
+}
+
 body {
-    font-family: Inter, "Segoe UI", sans-serif;
-    background: var(--background);
-    color: var(--text);
+    font-family: var(--font-sans);
+    background: var(--bg);
+    color: var(--ink);
     min-height: 100vh;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--ink);
+}
+
+p, small, label, li {
+    color: var(--ink-secondary);
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
 }
 
 button,
 input {
-    font: inherit;
+    font-family: var(--font-sans);
+    font-size: inherit;
+    color: inherit;
 }
 
 button {
     cursor: pointer;
 }
 
-/* Utilidades */
+img {
+    max-width: 100%;
+    display: block;
+}
 
-.muted {
-    color: var(--muted);
+[hidden] {
+    display: none !important;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
 }

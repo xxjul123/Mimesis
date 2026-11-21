@@ -1,118 +1,141 @@
 /* ==========================================================
    layout.css
-   Estructura de página: header, main, grids, footer y
-   comportamiento responsive
+   Estructura de página para Lobby (index.html) y Partida (game.html)
    ========================================================== */
 
-/* HEADER */
+/* HEADER COMPARTIDO */
 
-header {
-    height: 72px;
-    padding: 0 4%;
+.site-header {
+    height: 70px;
+    padding: 0 clamp(18px, 4vw, 56px);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: #101722;
+    gap: 20px;
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+
+.site-nav {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+}
+
+/* CONTENEDOR PRINCIPAL */
+
+.page-main {
+    width: min(100% - clamp(32px, 6vw, 96px), 1380px);
+    margin: 0 auto;
+    padding: 36px 0 56px;
+}
+
+.page-intro {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    padding-bottom: 24px;
+    margin-bottom: 28px;
     border-bottom: 1px solid var(--border);
 }
 
-.brand {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
+/* LOBBY: DASHBOARD DE 3 COLUMNAS */
 
-nav {
-    display: flex;
-    gap: 30px;
-}
-
-/* MAIN */
-
-main {
-    max-width: 1550px;
-    margin: auto;
-    padding: 35px 4%;
-}
-
-.welcome {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 28px;
-    gap: 15px;
-}
-
-/* DASHBOARD */
-
-.dashboard {
+.lobby-grid {
     display: grid;
-    grid-template-columns: 235px minmax(300px, 1fr) 260px;
-    gap: 20px;
+    grid-template-columns: 270px minmax(340px, 1fr) 290px;
+    gap: 22px;
     align-items: stretch;
 }
 
-/* GALERÍA */
+/* GALERÍA DE 3 ESCULTURAS */
 
 .gallery-section {
-    margin-top: 32px;
+    margin-top: 38px;
 }
 
 .gallery-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: baseline;
+    gap: 12px;
     margin-bottom: 16px;
 }
 
-.gallery {
+.gallery-grid {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 13px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
 }
 
-/* FOOTER */
+/* PARTIDA: GRID PRINCIPAL */
+
+.game-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 22px;
+    align-items: start;
+}
+
+.side-column {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.results-compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 18px;
+}
+
+/* BARRA INFERIOR */
 
 .bottom-bar {
-    margin-top: 30px;
-    padding-top: 20px;
+    margin-top: 36px;
+    padding-top: 22px;
     border-top: 1px solid var(--border);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 15px;
+    gap: 18px;
 }
 
 /* RESPONSIVE */
 
-@media (max-width: 1050px) {
-    .dashboard {
-        grid-template-columns: 210px 1fr;
+@media (max-width: 1080px) {
+    .lobby-grid {
+        grid-template-columns: 250px 1fr;
     }
 
     .info-panel {
         grid-column: 1 / -1;
     }
 
-    .gallery {
-        grid-template-columns: repeat(3, 1fr);
+    .game-grid {
+        grid-template-columns: minmax(0, 1fr) 280px;
     }
 }
 
-@media (max-width: 650px) {
-    header {
-        padding: 0 18px;
-    }
-
-    nav {
+@media (max-width: 780px) {
+    .site-nav {
         display: none;
     }
 
-    main {
-        padding: 25px 16px;
+    .page-intro {
+        flex-direction: column;
+        align-items: flex-start;
     }
 
-    .dashboard {
+    .lobby-grid,
+    .game-grid,
+    .gallery-grid,
+    .results-compare-grid {
         grid-template-columns: 1fr;
     }
 
@@ -120,21 +143,12 @@ main {
         grid-column: auto;
     }
 
-    .gallery {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-    .welcome {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-
     .bottom-bar {
         flex-direction: column;
         align-items: stretch;
     }
 
-    .start-button {
+    .bottom-bar .btn {
         width: 100%;
     }
 }
