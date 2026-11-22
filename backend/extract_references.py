@@ -21,14 +21,17 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 
 import cv2
+import numpy as np
 
 from .pdi import decode_image, letterbox_resize
 from .pose import PoseExtractor, extract_geometric_features
+from .segmentation import extract_main_contour, refine_mask
 
 ROOT = Path(__file__).resolve().parent.parent
 SCULPTURES_DIR = ROOT / "assets" / "sculptures"
 OUT_JSON = Path(__file__).parent / "data" / "reference_poses.json"
 PREVIEW_DIR = Path(__file__).parent / "data" / "reference_previews"
+MASKS_DIR = Path(__file__).parent / "data" / "reference_masks"
 
 # Colores BGR por segmento corporal para las previsualizaciones
 SEGMENT_COLORS: Dict[str, Tuple[int, int, int]] = {
@@ -334,16 +337,31 @@ def draw_preview(img_bgr, landmarks: List[Dict[str, float]], out_path: Path):
     cv2.imwrite(str(out_path), vis_img)
 
 
+def draw_mask_preview(img_bgr, mask: np.ndarray, out_path: Path):
+    """Guarda una previsualización de la máscara de referencia superpuesta con contorno."""
+    vis = (img_bgr.astype(np.float32) * 0.35).astype(np.uint8)
+    vis[mask > 127] = img_bgr[mask > 127]
+    cnt = extract_main_contour(mask)
+    if cnt is not None:
+        cv2.drawContours(vis, [cnt], -1, (85, 141, 200), 3, cv2.LINE_AA)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    cv2.imwrite(str(out_path), vis)
+
+
 def extract_for_sculpture(extractor: PoseExtractor, sid: str, img_bgr):
     h, w = img_bgr.shape[:2]
+    full_mask = None
+
     if sid == "belalcazar":
         # Recorte ROI alrededor de la estatua para separar del fondo de árboles
-        crop = img_bgr[int(h * 0.12) : int(h * 0.82), int(w * 0.10) : int(w * 0.70)]
+        y0, y1 = int(h * 0.12), int(h * 0.82)
+        x0, x1 = int(w * 0.10), int(w * 0.70)
+        crop = img_bgr[y0:y1, x0:x1]
         boxed, meta = letterbox_resize(crop, 640)
-        res = extractor.extract(cv2.cvtColor(boxed, cv2.COLOR_BGR2RGB), meta)
+        res = extractor.extract_with_mask(cv2.cvtColor(boxed, cv2.COLOR_BGR2RGB), meta)
         if res is None:
             return None
-        lms, vis = res
+        lms, vis, crop_mask = res
         full_lms = []
         for lm in lms:
             full_lms.append(
@@ -355,12 +373,16 @@ def extract_for_sculpture(extractor: PoseExtractor, sid: str, img_bgr):
                 }
             )
         lms = full_lms
+        if crop_mask is not None:
+            full_mask = np.zeros((h, w), dtype=np.float32)
+            resized_crop = cv2.resize(crop_mask, (x1 - x0, y1 - y0), interpolation=cv2.INTER_LINEAR)
+            full_mask[y0:y1, x0:x1] = resized_crop
     else:
         boxed, meta = letterbox_resize(img_bgr, 640)
-        res = extractor.extract(cv2.cvtColor(boxed, cv2.COLOR_BGR2RGB), meta)
+        res = extractor.extract_with_mask(cv2.cvtColor(boxed, cv2.COLOR_BGR2RGB), meta)
         if res is None:
             return None
-        lms, vis = res
+        lms, vis, full_mask = res
 
     # Aplicar correcciones supervisadas si existen para esta estatua
     for idx, coords in SUPERVISED_OVERRIDES.get(sid, {}).items():
@@ -370,14 +392,15 @@ def extract_for_sculpture(extractor: PoseExtractor, sid: str, img_bgr):
         lms[idx]["y"] = round(ny, 5)
         lms[idx]["visibility"] = round(float(override_vis), 4)
 
-    return lms, vis
+    return lms, vis, full_mask
 
 
 def main():
-    extractor = PoseExtractor(model_complexity=1, min_detection_confidence=0.05)
+    extractor = PoseExtractor(model_complexity=1, min_detection_confidence=0.05, enable_segmentation=True)
     output = {
-        "_comment": "Landmarks y ángulos reales extraídos de las 3 fotografías de esculturas (BlazePose + refinamiento supervisado en bronce/mármol)."
+        "_comment": "Landmarks, ángulos y máscaras de referencia extraídos de las 3 fotografías de esculturas (BlazePose + refinamiento supervisado)."
     }
+    MASKS_DIR.mkdir(parents=True, exist_ok=True)
 
     for sid in ("belalcazar", "discobolo", "shakespeare"):
         img_path = SCULPTURES_DIR / f"{sid}.jpg"
@@ -391,15 +414,36 @@ def main():
             print(f"[AVISO] No se pudo extraer pose en {sid}.jpg")
             continue
 
-        landmarks, mean_vis = res
+        landmarks, mean_vis, raw_mask = res
         angles, _ = extract_geometric_features(landmarks)
+
+        # Si existe una máscara manual (<sid>_manual.png), se respeta con prioridad
+        manual_mask_path = MASKS_DIR / f"{sid}_manual.png"
+        out_mask_path = MASKS_DIR / f"{sid}.png"
+        mask_source = "none"
+
+        if manual_mask_path.exists():
+            manual_raw = cv2.imread(str(manual_mask_path), cv2.IMREAD_GRAYSCALE)
+            if manual_raw is not None:
+                clean_mask = refine_mask(manual_raw, threshold=0.5)
+                cv2.imwrite(str(out_mask_path), clean_mask)
+                draw_mask_preview(img_bgr, clean_mask, PREVIEW_DIR / f"{sid}_mask.jpg")
+                mask_source = "manual"
+        elif raw_mask is not None:
+            clean_mask = refine_mask(raw_mask, threshold=0.40)
+            cv2.imwrite(str(out_mask_path), clean_mask)
+            draw_mask_preview(img_bgr, clean_mask, PREVIEW_DIR / f"{sid}_mask.jpg")
+            mask_source = "blazepose_morph"
+
         output[sid] = {
             "angles": {k: round(v, 2) for k, v in angles.items()},
             "landmarks": landmarks,
             "mean_visibility": round(mean_vis, 3),
+            "mask_file": f"reference_masks/{sid}.png" if mask_source != "none" else None,
+            "mask_source": mask_source,
         }
         draw_preview(img_bgr, landmarks, PREVIEW_DIR / f"{sid}_skeleton.jpg")
-        print(f"[OK] {sid}: ángulos = {output[sid]['angles']}")
+        print(f"[OK] {sid}: ángulos = {output[sid]['angles']} | máscara = {mask_source}")
 
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     OUT_JSON.write_text(json.dumps(output, indent=2, ensure_ascii=False), encoding="utf-8")

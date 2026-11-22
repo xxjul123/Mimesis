@@ -1053,3 +1053,305 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* SELECTOR DE MODO DE PARTIDA (LOBBY) */
+
+.mode-selector {
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+.mode-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.mode-option {
+    text-align: left;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background: var(--surface-soft);
+    color: var(--ink-secondary);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.mode-option strong {
+    display: block;
+    font-size: 12px;
+    color: var(--ink);
+    margin-bottom: 2px;
+}
+
+.mode-option small {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.35;
+}
+
+.mode-option:hover {
+    border-color: var(--border-strong);
+}
+
+.mode-option.active {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+}
+
+.mode-option.active strong {
+    color: var(--accent);
+}
+
+/* SELECTOR DE VISTA SOBRE RESULTADO DEL JUGADOR */
+
+.visual-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+
+.visual-card-head h4 {
+    margin: 0;
+}
+
+.view-mode-bar {
+    display: inline-flex;
+    gap: 4px;
+    background: var(--surface-soft);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 3px;
+}
+
+.view-pill {
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.view-pill:hover {
+    color: var(--ink);
+}
+
+.view-pill.active {
+    background: var(--accent);
+    color: #12110f;
+}
+
+.view-pill:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* CLASIFICADOR ML (PROBABILIDADES POR ESCULTURA) */
+
+.classifier-section {
+    margin-top: 18px;
+    padding: 14px 16px;
+    border-radius: var(--radius-md);
+    background: var(--surface-soft);
+    border: 1px solid var(--border);
+}
+
+.classifier-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.classifier-head h4 {
+    margin: 0;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+}
+
+.classifier-prediction {
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.classifier-prediction.unrecognized {
+    color: var(--score-low);
+}
+
+.prob-row {
+    display: grid;
+    grid-template-columns: 145px 1fr 48px;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    margin-top: 8px;
+}
+
+.prob-row span {
+    color: var(--ink-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.prob-row.winner span,
+.prob-row.winner strong {
+    color: var(--ink);
+    font-weight: 600;
+}
+
+.prob-track {
+    height: 7px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+}
+
+.prob-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: var(--muted);
+    transition: width 0.35s ease;
+}
+
+.prob-row.winner .prob-fill {
+    background: var(--accent);
+}
+
+.prob-row strong {
+    text-align: right;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+/* MÉTRICAS DE SILUETA Y BOTÓN INSPECTOR PDI */
+
+.pdi-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 18px;
+    margin-bottom: 8px;
+}
+
+.pdi-header-row h4 {
+    margin: 0;
+    font-size: 13px;
+}
+
+.pdi-diagnostics.grid-5 {
+    margin-top: 0;
+    grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
+}
+
+/* GALERÍA COMPACTA EN BARRA LATERAL (MODO LIBRE) */
+
+.free-mode-gallery {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.free-mini-card {
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: var(--surface-soft);
+    transition: border-color 0.15s ease;
+}
+
+.free-mini-card.predicted {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+}
+
+.free-mini-card img {
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    object-fit: cover;
+    display: block;
+}
+
+.free-mini-card span {
+    display: block;
+    font-size: 10px;
+    padding: 5px 4px;
+    text-align: center;
+    color: var(--ink-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* MODAL INSPECTOR PIPELINE PDI */
+
+.modal-card.inspector-modal-card {
+    width: min(100%, 920px);
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.inspector-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(195px, 1fr));
+    gap: 14px;
+    margin: 16px 0 20px;
+}
+
+.inspector-step {
+    background: var(--surface-soft);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.inspector-step-img {
+    aspect-ratio: 4 / 3;
+    background: #0d0c0a;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+}
+
+.inspector-step-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+.inspector-step-body {
+    padding: 10px 12px;
+}
+
+.inspector-step-body strong {
+    display: block;
+    font-size: 12px;
+    color: var(--ink);
+    margin-bottom: 3px;
+}
+
+.inspector-step-body p {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.45;
+    margin: 0;
+}

@@ -17,6 +17,7 @@
             { name: "Jugador 1", totalScore: 0, lastScore: null, roundsPlayed: 0 },
             { name: "Jugador 2", totalScore: 0, lastScore: null, roundsPlayed: 0 }
         ],
+        gameMode: "challenge",
         sculptureId: sculptures[0]?.id || "belalcazar",
         sculpture: sculptures[0],
         currentPlayer: 0,
@@ -40,6 +41,7 @@
         lastScore: typeof p.lastScore === "number" ? p.lastScore : null,
         roundsPlayed: Number(p.roundsPlayed) || 0
     }));
+    game.gameMode = game.gameMode === "classify" ? "classify" : "challenge";
     game.sculpture =
         sculptures.find((s) => s.id === (game.sculptureId || game.sculpture?.id)) ||
         sculptures[0];
@@ -52,8 +54,18 @@
     let captured = false;
     let capturedBlob = null;
     let lastAnalysis = null;
+    let playerViewMode = "segments";
     let countdownTimer = null;
     let toastTimer = null;
+
+    const SEGMENT_TO_REGION = {
+        cabeza: "head",
+        torso: "torso",
+        brazo_izq: "arms",
+        brazo_der: "arms",
+        pierna_izq: "legs",
+        pierna_der: "legs"
+    };
 
     /* Colores y definiciones de los 15 landmarks usados para calificar (coincide con extract_references.py) */
     const SEGMENT_COLORS = {
@@ -151,9 +163,26 @@
         }
     }
 
+    function renderFreeModeGallery(predictedId = null) {
+        const host = $("free-mode-gallery");
+        if (!host) return;
+        host.innerHTML = "";
+        sculptures.forEach((sc) => {
+            const card = document.createElement("div");
+            card.className = `free-mini-card${predictedId && sc.id === predictedId ? " predicted" : ""}`;
+            const img = document.createElement("img");
+            window.setSculptureImage(img, sc);
+            const label = document.createElement("span");
+            label.textContent = sc.title.replace("Sebastián de ", "").replace("William ", "");
+            card.append(img, label);
+            host.appendChild(card);
+        });
+    }
+
     function renderGame() {
         const player = currentPlayer();
         const s = game.sculpture;
+        const isFree = game.gameMode === "classify";
 
         $("current-player-name").textContent = player.name;
         $("current-avatar").textContent = player.name.trim().charAt(0).toUpperCase();
@@ -162,16 +191,57 @@
         $("round-number").textContent = String(game.round).padStart(2, "0");
         $("turn-counter").textContent = `TURNO ${game.currentPlayer + 1}`;
 
-        $("sculpture-title").textContent = s.title;
-        $("sculpture-author").textContent = s.author;
-        $("sculpture-emotion").textContent = s.emotion;
-        window.setSculptureImage($("sculpture-image"), s);
-        const refStage = $("reference-result-stage");
-        if (refStage) {
-            refStage.innerHTML = '<img id="reference-result-image" alt="Obra de referencia">';
-            window.setSculptureImage($("reference-result-image"), s);
+        if ($("game-mode-eyebrow")) {
+            $("game-mode-eyebrow").textContent = isFree
+                ? "Modo Libre · Adivina la Obra (Clasificador ML)"
+                : "Imitación corporal · Modo Reto";
         }
-        $("cultural-description").textContent = s.description;
+        if ($("game-intro-title")) {
+            $("game-intro-title").textContent = isFree
+                ? "Elige una obra en secreto y deja que el modelo la adivine."
+                : "Observa la obra y entra en pose.";
+        }
+        if ($("game-intro-desc")) {
+            $("game-intro-desc").textContent = isFree
+                ? "Imita cualquiera de las 3 esculturas de la derecha sin indicarle al sistema cuál elegiste. El clasificador ML identificará la obra y evaluará tu postura."
+                : "Captura una única fotografía con la cámara o sube una imagen de prueba para evaluarla con el pipeline PDI + BlazePose + Segmentación + MLP.";
+        }
+
+        if ($("side-sculpture-heading")) {
+            $("side-sculpture-heading").textContent = isFree
+                ? "Obras posibles (elige en secreto)"
+                : "Obra asignada";
+        }
+        if ($("challenge-sculpture-box")) $("challenge-sculpture-box").hidden = isFree;
+        if ($("free-mode-box")) $("free-mode-box").hidden = !isFree;
+
+        if (isFree) {
+            renderFreeModeGallery(null);
+            const refStage = $("reference-result-stage");
+            if (refStage) {
+                refStage.innerHTML =
+                    '<div class="visual-placeholder">La obra que adivine el clasificador aparecerá aquí.</div>';
+            }
+            if ($("reference-stage-title")) {
+                $("reference-stage-title").textContent = "Obra identificada por el modelo";
+            }
+            $("cultural-description").textContent =
+                "Al evaluar tu foto, aquí aparecerá la ficha cultural de la escultura identificada por el clasificador.";
+        } else {
+            $("sculpture-title").textContent = s.title;
+            $("sculpture-author").textContent = s.author;
+            $("sculpture-emotion").textContent = s.emotion;
+            window.setSculptureImage($("sculpture-image"), s);
+            const refStage = $("reference-result-stage");
+            if (refStage) {
+                refStage.innerHTML = '<img id="reference-result-image" alt="Obra de referencia">';
+                window.setSculptureImage($("reference-result-image"), s);
+            }
+            if ($("reference-stage-title")) {
+                $("reference-stage-title").textContent = "Escultura de referencia · Esqueleto base";
+            }
+            $("cultural-description").textContent = s.description;
+        }
 
         const list = $("player-list");
         list.innerHTML = "";
@@ -423,7 +493,7 @@
         $("analyze-btn").disabled = false;
         $("analyze-btn").textContent = "Evaluar pose con Python";
         $("result-message").textContent =
-            "Fotografía lista. Presiona «Evaluar pose con Python» para ejecutar el preprocesamiento PDI y BlazePose.";
+            "Fotografía lista. Presiona «Evaluar pose con Python» para ejecutar el preprocesamiento PDI, segmentación y evaluación.";
         $("score-value").textContent = "—";
         $("score-value").className = "score-ring";
         $("score-title").textContent = "Sin evaluar";
@@ -431,8 +501,15 @@
             "El puntaje de 0 a 100 aparecerá aquí al finalizar el análisis.";
         $("player-result-stage").innerHTML =
             '<div class="visual-placeholder">El esqueleto coloreado por zona se dibujará aquí.</div>';
+        playerViewMode = "segments";
+        document.querySelectorAll(".view-pill").forEach((b) => {
+            b.classList.toggle("active", b.dataset.view === "segments");
+        });
+        if ($("sculpture-view-btn")) $("sculpture-view-btn").disabled = true;
+        if ($("open-inspector-btn")) $("open-inspector-btn").disabled = true;
+        renderClassifierProbs(null);
         renderHeatmap(null);
-        renderPdiDiagnostics(null);
+        renderPdiDiagnostics(null, null);
     }
 
     function boxesOverlap(a, b, pad = 4) {
@@ -444,7 +521,7 @@
         );
     }
 
-    function drawSegmentLegend(ctx, scale) {
+    function drawSegmentLegend(ctx, scale, isHeatmap = false) {
         const fontSize = Math.max(11, Math.round(13 * scale));
         const padX = Math.max(8, Math.round(10 * scale));
         const padY = Math.max(6, Math.round(8 * scale));
@@ -453,10 +530,16 @@
         const rowH = fontSize + rowGap;
 
         ctx.font = `600 ${fontSize}px system-ui, -apple-system, sans-serif`;
-        const entries = Object.entries(SEGMENT_COLORS).map(([seg, color]) => ({
-            name: SEGMENT_LEGEND_NAMES[seg],
-            color
-        }));
+        const entries = isHeatmap
+            ? [
+                { name: "Excelente (≥80%)", color: tierColor("high") },
+                { name: "Medio (55–79%)", color: tierColor("mid") },
+                { name: "Ajustar (<55%)", color: tierColor("low") }
+            ]
+            : Object.entries(SEGMENT_COLORS).map(([seg, color]) => ({
+                name: SEGMENT_LEGEND_NAMES[seg],
+                color
+            }));
 
         const maxTw = Math.max(...entries.map((e) => ctx.measureText(e.name).width));
         const x0 = padX;
@@ -490,7 +573,14 @@
         return { x0, y0, x1: x0 + boxW, y1: y0 + boxH };
     }
 
-    function drawPoseOverlay(container, imageUrl, landmarks) {
+    function resolveSegmentColor(segment, heatmapRegions) {
+        if (!heatmapRegions) return SEGMENT_COLORS[segment];
+        const regKey = SEGMENT_TO_REGION[segment] || "torso";
+        const val = heatmapRegions[regKey];
+        return tierColor(scoreTier(typeof val === "number" ? val : null));
+    }
+
+    function drawPoseOverlay(container, imageUrl, landmarks, heatmapRegions = null) {
         container.innerHTML = "";
         const img = new Image();
         img.crossOrigin = "anonymous";
@@ -514,7 +604,7 @@
                 const outlineW = lineW + Math.max(2, 2.8 * scale);
                 const dotR = Math.max(4.5, 6.5 * scale);
 
-                // 1. Conexiones coloreadas por segmento (con borde oscuro)
+                // 1. Conexiones coloreadas por segmento o por mapa de calor
                 ctx.lineCap = "round";
                 SEGMENT_CONNECTIONS.forEach(([a, b, segment]) => {
                     const pA = landmarks[a];
@@ -534,7 +624,7 @@
                     ctx.lineTo(x2, y2);
                     ctx.stroke();
 
-                    ctx.strokeStyle = SEGMENT_COLORS[segment];
+                    ctx.strokeStyle = resolveSegmentColor(segment, heatmapRegions);
                     ctx.lineWidth = lineW;
                     ctx.beginPath();
                     ctx.moveTo(x1, y1);
@@ -551,7 +641,7 @@
 
                     const px = pt.x * w;
                     const py = pt.y * h;
-                    const color = SEGMENT_COLORS[segment];
+                    const color = resolveSegmentColor(segment, heatmapRegions);
 
                     ctx.beginPath();
                     ctx.arc(px, py, dotR, 0, Math.PI * 2);
@@ -565,7 +655,7 @@
                 });
 
                 // 3. Leyenda en esquina superior izquierda
-                const legendBox = drawSegmentLegend(ctx, scale);
+                const legendBox = drawSegmentLegend(ctx, scale, Boolean(heatmapRegions));
 
                 // 4. Etiquetas legibles sin solapamiento
                 const fontSize = Math.max(10, Math.round(12 * scale));
@@ -708,7 +798,60 @@
         });
     }
 
-    function renderPdiDiagnostics(pdi) {
+    function renderClassifierProbs(data) {
+        const predEl = $("classifier-prediction");
+        const host = $("classifier-probs");
+        if (!predEl || !host) return;
+        host.innerHTML = "";
+
+        if (!data || !data.class_probabilities) {
+            predEl.textContent = "Sin evaluar";
+            predEl.className = "classifier-prediction";
+            return;
+        }
+
+        const probs = data.class_probabilities;
+        const predId = data.predicted_class;
+        const predSculp = sculptures.find((s) => s.id === predId);
+        const predName = predSculp ? predSculp.title : predId;
+        const conf = typeof data.predicted_confidence === "number" ? Math.round(data.predicted_confidence) : 0;
+        const modeTag = data.evaluator_mode === "mlp" ? "PoseMLP" : "Geométrico";
+
+        if (data.is_recognized === false) {
+            predEl.textContent = `Postura no reconocida (${modeTag})`;
+            predEl.className = "classifier-prediction unrecognized";
+        } else {
+            predEl.textContent = `Predicción (${modeTag}): ${predName} (${conf}%)`;
+            predEl.className = "classifier-prediction";
+        }
+
+        sculptures.forEach((sc) => {
+            const val = Number(probs[sc.id] ?? 0);
+            const isWinner = sc.id === predId && data.is_recognized !== false;
+
+            const row = document.createElement("div");
+            row.className = `prob-row${isWinner ? " winner" : ""}`;
+
+            const name = document.createElement("span");
+            name.textContent = sc.title;
+
+            const track = document.createElement("div");
+            track.className = "prob-track";
+
+            const fill = document.createElement("div");
+            fill.className = "prob-fill";
+            fill.style.width = `${Math.max(0, Math.min(100, val))}%`;
+            track.appendChild(fill);
+
+            const num = document.createElement("strong");
+            num.textContent = `${Math.round(val)}%`;
+
+            row.append(name, track, num);
+            host.appendChild(row);
+        });
+    }
+
+    function renderPdiDiagnostics(pdi, silhouette) {
         $("pdi-sharpness").textContent = pdi
             ? `${Math.round(pdi.laplacian_var)} (${pdi.is_blurry ? "Borrosa" : "Nítida"})`
             : "—";
@@ -718,49 +861,176 @@
         $("pdi-confidence").textContent = pdi && typeof pdi.mean_visibility === "number"
             ? `${Math.round(pdi.mean_visibility * 100)}%`
             : "—";
+        if ($("pdi-iou")) {
+            $("pdi-iou").textContent = silhouette && typeof silhouette.iou === "number"
+                ? `${Math.round(silhouette.iou)}%`
+                : "—";
+        }
+        if ($("pdi-hu")) {
+            $("pdi-hu").textContent = silhouette && typeof silhouette.hu_similarity === "number"
+                ? `${Math.round(silhouette.hu_similarity)}%`
+                : "—";
+        }
+    }
+
+    function renderPlayerResultStage() {
+        const container = $("player-result-stage");
+        if (!container || !lastAnalysis) return;
+
+        const baseImage = lastAnalysis.annotated_image || $("captured-image").src;
+        const sculptView = lastAnalysis.debug_views?.sculpture_mode_view;
+
+        if (playerViewMode === "sculpture" && sculptView) {
+            container.innerHTML = "";
+            const img = document.createElement("img");
+            img.src = sculptView;
+            img.alt = "Silueta segmentada en Modo Escultura";
+            container.appendChild(img);
+            return;
+        }
+
+        if (Array.isArray(lastAnalysis.landmarks) && lastAnalysis.landmarks.length) {
+            const heatmapArg = playerViewMode === "heatmap" ? (lastAnalysis.regions || null) : null;
+            drawPoseOverlay(container, baseImage, lastAnalysis.landmarks, heatmapArg);
+        } else {
+            container.innerHTML = "";
+            const img = document.createElement("img");
+            img.src = baseImage;
+            container.appendChild(img);
+        }
+    }
+
+    function openInspectorModal() {
+        if (!lastAnalysis?.debug_views) return;
+        const grid = $("inspector-grid");
+        if (!grid) return;
+        grid.innerHTML = "";
+
+        const views = lastAnalysis.debug_views;
+        const pdi = lastAnalysis.pdi_metrics || {};
+        const sil = lastAnalysis.silhouette_metrics || null;
+
+        const steps = [
+            {
+                title: "01 · Captura Original",
+                src: $("captured-image").src,
+                desc: `Resolución original ${pdi.orig_size ? `${pdi.orig_size[0]}×${pdi.orig_size[1]}` : ""}.`
+            },
+            {
+                title: "02 · CLAHE Adaptativo (LAB)",
+                src: views.clahe_view,
+                desc: pdi.clahe_applied
+                    ? `Aplicado en canal L (luminancia media ${Math.round(pdi.mean_luminance ?? 0)}).`
+                    : `Iluminación adecuada (L=${Math.round(pdi.mean_luminance ?? 0)}); contraste conservado.`
+            },
+            {
+                title: "03 · Mapa Laplaciano",
+                src: views.laplacian_view,
+                desc: `Varianza ${Math.round(pdi.laplacian_var ?? 0)} (${pdi.is_blurry ? "desenfoque detectado" : "nitidez óptima"}).`
+            },
+            {
+                title: "04 · Máscara + Contorno",
+                src: views.mask_contour_view,
+                desc: sil
+                    ? `Morfología OpenCV + findContours · IoU ${Math.round(sil.iou)}% · Hu ${Math.round(sil.hu_similarity)}%.`
+                    : "Segmentación corporal refinada con apertura y cierre morfológico."
+            },
+            {
+                title: "05 · Modo Escultura",
+                src: views.sculpture_mode_view,
+                desc: "Silueta aislada con tono piedra/bronce sobre fondo de galería desenfocado."
+            }
+        ];
+
+        steps.forEach((step) => {
+            if (!step.src) return;
+            const card = document.createElement("article");
+            card.className = "inspector-step";
+
+            const imgWrap = document.createElement("div");
+            imgWrap.className = "inspector-step-img";
+            const img = document.createElement("img");
+            img.src = step.src;
+            img.alt = step.title;
+            imgWrap.appendChild(img);
+
+            const body = document.createElement("div");
+            body.className = "inspector-step-body";
+            const title = document.createElement("strong");
+            title.textContent = step.title;
+            const desc = document.createElement("p");
+            desc.textContent = step.desc;
+            body.append(title, desc);
+
+            card.append(imgWrap, body);
+            grid.appendChild(card);
+        });
+
+        $("inspector-modal").classList.add("open");
     }
 
     function applyAnalysisResult(data) {
+        lastAnalysis = data;
         const score = Number(data.score);
         const tier = scoreTier(score);
 
+        // Resolver escultura evaluada (en Modo Libre es la predicha por el modelo)
+        const matchedSculpture =
+            sculptures.find((s) => s.id === data.sculpture_id) || game.sculpture;
+
         if (Number.isFinite(score)) {
-            $("score-value").textContent = `${Math.round(score)}`;
-            $("score-value").className = `score-ring ${tier}`;
-            $("score-title").textContent =
-                tier === "high" ? "Imitación excelente"
-                : tier === "mid" ? "Muy cerca de la obra"
-                : "Ajusta tu postura";
+            $("score-value").textContent = data.is_recognized === false ? "—" : `${Math.round(score)}`;
+            $("score-value").className = `score-ring ${data.is_recognized === false ? "low" : tier}`;
+            if (data.is_recognized === false) {
+                $("score-title").textContent = "Postura no reconocida";
+            } else if (game.gameMode === "classify") {
+                $("score-title").textContent = `Obra identificada: ${matchedSculpture.title}`;
+            } else {
+                $("score-title").textContent =
+                    tier === "high" ? "Imitación excelente"
+                    : tier === "mid" ? "Muy cerca de la obra"
+                    : "Ajusta tu postura";
+            }
             $("score-description").textContent = data.feedback || "Evaluación completada.";
         }
 
-        const baseImage = data.annotated_image || $("captured-image").src;
-        if (Array.isArray(data.landmarks) && data.landmarks.length) {
-            drawPoseOverlay($("player-result-stage"), baseImage, data.landmarks);
-        } else {
-            $("player-result-stage").innerHTML = "";
-            const img = document.createElement("img");
-            img.src = baseImage;
-            $("player-result-stage").appendChild(img);
+        if ($("sculpture-view-btn")) {
+            $("sculpture-view-btn").disabled = !data.debug_views?.sculpture_mode_view;
         }
+        if ($("open-inspector-btn")) {
+            $("open-inspector-btn").disabled = !data.debug_views;
+        }
+
+        renderPlayerResultStage();
 
         if (Array.isArray(data.reference_landmarks) && data.reference_landmarks.length) {
             drawPoseOverlay(
                 $("reference-result-stage"),
-                game.sculpture.image,
+                matchedSculpture.image,
                 data.reference_landmarks
             );
         }
 
+        if (game.gameMode === "classify") {
+            renderFreeModeGallery(data.is_recognized === false ? null : matchedSculpture.id);
+            if ($("reference-stage-title")) {
+                $("reference-stage-title").textContent = data.is_recognized === false
+                    ? "Obra más cercana (baja confianza)"
+                    : `Obra identificada · ${matchedSculpture.title}`;
+            }
+            $("cultural-description").textContent =
+                `${matchedSculpture.title} (${matchedSculpture.author} · ${matchedSculpture.emotion}): ${matchedSculpture.description}`;
+        }
+
+        renderClassifierProbs(data);
         renderHeatmap(data.regions || null);
-        renderPdiDiagnostics(data.pdi_metrics || null);
+        renderPdiDiagnostics(data.pdi_metrics || null, data.silhouette_metrics || null);
 
         $("analysis-status").textContent = data.evaluator_mode === "mlp"
-            ? "Evaluado (MLP propio)"
+            ? "Evaluado (PoseMLP)"
             : "Evaluado (geométrico)";
         $("analysis-status").className = "status-badge ready";
         $("result-message").textContent = data.message || "Análisis completado.";
-        lastAnalysis = data;
     }
 
     async function processCapture() {
@@ -782,6 +1052,8 @@
             form.append("sculpture_id", game.sculpture.id);
             form.append("sculpture", JSON.stringify(game.sculpture));
             form.append("round", String(game.round));
+            form.append("game_mode", game.gameMode);
+            form.append("include_debug_views", "true");
 
             const response = await fetch(ANALYSIS_ENDPOINT, {
                 method: "POST",
@@ -790,16 +1062,24 @@
 
             const payload = await response.json().catch(() => null);
             if (!response.ok) {
-                throw new Error(payload?.detail || `HTTP ${response.status}`);
+                const err = new Error(payload?.detail || `HTTP ${response.status}`);
+                err.isHttpError = true;
+                err.status = response.status;
+                throw err;
             }
 
             applyAnalysisResult(payload);
         } catch (err) {
-            $("analysis-status").textContent = "Error";
+            $("analysis-status").textContent = err.isHttpError ? "Revisar foto" : "Error";
             $("analysis-status").className = "status-badge error";
-            $("result-message").textContent =
-                `No se pudo completar el análisis (${err.message}). Verifica que el servidor Python esté ejecutándose en localhost:8000.`;
-            notify("Error al conectar con el backend Python.");
+            if (err.isHttpError) {
+                $("result-message").textContent = err.message;
+                notify(err.message);
+            } else {
+                $("result-message").textContent =
+                    `No se pudo conectar con el servidor Python (${err.message}). Verifica que esté ejecutándose en localhost:8000.`;
+                notify("Error al conectar con el backend Python.");
+            }
         } finally {
             $("processing-box").classList.remove("visible");
             btn.disabled = false;
@@ -842,7 +1122,9 @@
             `;
             tbody.appendChild(tr);
         });
-        $("ranking-round-label").textContent = `Ronda ${game.round} completada · ${game.sculpture.title}`;
+        $("ranking-round-label").textContent = game.gameMode === "classify"
+            ? `Ronda ${game.round} completada · Modo Libre (Adivina la Obra)`
+            : `Ronda ${game.round} completada · ${game.sculpture.title}`;
         $("ranking-modal").classList.add("open");
     }
 
@@ -875,17 +1157,42 @@
         $("ranking-modal").classList.remove("open");
         game.round += 1;
         game.currentPlayer = 0;
-        // Rota automáticamente a la siguiente escultura de las 3 disponibles
-        const nextIdx = (sculptures.findIndex((s) => s.id === game.sculpture.id) + 1) % sculptures.length;
-        game.sculpture = sculptures[nextIdx];
-        game.sculptureId = game.sculpture.id;
+        if (game.gameMode !== "classify") {
+            const nextIdx = (sculptures.findIndex((s) => s.id === game.sculpture.id) + 1) % sculptures.length;
+            game.sculpture = sculptures[nextIdx];
+            game.sculptureId = game.sculpture.id;
+        }
         saveState();
         retake();
         renderGame();
-        notify(`Ronda ${game.round}: ahora imitan ${game.sculpture.title}.`);
+        notify(
+            game.gameMode === "classify"
+                ? `Ronda ${game.round} (Modo Libre): elijan su obra en secreto.`
+                : `Ronda ${game.round}: ahora imitan ${game.sculpture.title}.`
+        );
     }
 
     /* Eventos */
+    document.querySelectorAll(".view-pill").forEach((pill) => {
+        pill.addEventListener("click", () => {
+            if (pill.disabled) return;
+            playerViewMode = pill.dataset.view || "segments";
+            document.querySelectorAll(".view-pill").forEach((b) => {
+                b.classList.toggle("active", b.dataset.view === playerViewMode);
+            });
+            renderPlayerResultStage();
+        });
+    });
+
+    $("open-inspector-btn")?.addEventListener("click", openInspectorModal);
+    $("close-inspector-btn")?.addEventListener("click", () => {
+        $("inspector-modal")?.classList.remove("open");
+    });
+    $("inspector-modal")?.addEventListener("click", (e) => {
+        if (e.target === $("inspector-modal")) {
+            $("inspector-modal").classList.remove("open");
+        }
+    });
     $("camera-btn").addEventListener("click", () => (stream ? stopCamera() : startCamera()));
     $("camera-select").addEventListener("change", (e) => {
         selectedDeviceId = e.target.value;

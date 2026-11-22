@@ -16,7 +16,7 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
-from .pdi import LetterboxMeta, unletterbox_point
+from .pdi import LetterboxMeta, unletterbox_mask, unletterbox_point
 
 try:
     import mediapipe as mp
@@ -152,11 +152,18 @@ def _ensure_task_model() -> Path:
 class PoseExtractor:
     """Envoltorio reutilizable de MediaPipe BlazePose para imágenes estáticas."""
 
-    def __init__(self, model_complexity: int = 1, min_detection_confidence: float = 0.45):
+    def __init__(
+        self,
+        model_complexity: int = 1,
+        min_detection_confidence: float = 0.30,
+        enable_segmentation: bool = True,
+    ):
         if mp is None:
             raise RuntimeError(
                 "MediaPipe no está instalado. Instala con: pip install -r backend/requirements.txt"
             )
+
+        self._enable_segmentation = enable_segmentation
 
         # Compatibilidad con MediaPipe clásico (mp.solutions) y moderno (mp.tasks)
         if hasattr(mp, "solutions") and hasattr(mp.solutions, "pose"):
@@ -164,7 +171,7 @@ class PoseExtractor:
             self._pose = mp.solutions.pose.Pose(
                 static_image_mode=True,
                 model_complexity=model_complexity,
-                enable_segmentation=False,
+                enable_segmentation=enable_segmentation,
                 min_detection_confidence=min_detection_confidence,
             )
         else:
@@ -180,25 +187,37 @@ class PoseExtractor:
                 running_mode=mp_vision.RunningMode.IMAGE,
                 num_poses=1,
                 min_pose_detection_confidence=min_detection_confidence,
+                output_segmentation_masks=enable_segmentation,
             )
             self._landmarker = mp_vision.PoseLandmarker.create_from_options(options)
 
-    def extract(self, boxed_rgb: np.ndarray, meta: LetterboxMeta) -> Optional[Tuple[List[Dict[str, float]], float]]:
+    def extract_with_mask(
+        self,
+        boxed_rgb: np.ndarray,
+        meta: LetterboxMeta,
+    ) -> Optional[Tuple[List[Dict[str, float]], float, Optional[np.ndarray]]]:
         """
-        Devuelve (landmarks_en_coordenadas_originales, visibilidad_promedio)
+        Devuelve (landmarks_en_coordenadas_originales, visibilidad_promedio, mask_prob_orig)
         o None si no se detectó ninguna persona.
         """
+        raw_mask: Optional[np.ndarray] = None
+
         if self._backend == "solutions":
             result = self._pose.process(boxed_rgb)
             if not result.pose_landmarks:
                 return None
             raw_lms = result.pose_landmarks.landmark
+            if self._enable_segmentation and getattr(result, "segmentation_mask", None) is not None:
+                raw_mask = np.squeeze(np.asarray(result.segmentation_mask, dtype=np.float32))
         else:
             mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=np.ascontiguousarray(boxed_rgb))
             result = self._landmarker.detect(mp_image)
             if not result.pose_landmarks:
                 return None
             raw_lms = result.pose_landmarks[0]
+            seg_masks = getattr(result, "segmentation_masks", None)
+            if self._enable_segmentation and seg_masks:
+                raw_mask = np.squeeze(np.asarray(seg_masks[0].numpy_view(), dtype=np.float32))
 
         landmarks: List[Dict[str, float]] = []
         visibilities: List[float] = []
@@ -215,5 +234,20 @@ class PoseExtractor:
                 }
             )
 
+        orig_mask: Optional[np.ndarray] = None
+        if raw_mask is not None and raw_mask.ndim == 2:
+            orig_mask = unletterbox_mask(raw_mask, meta)
+
         mean_vis = float(np.mean(visibilities)) if visibilities else 0.0
+        return landmarks, mean_vis, orig_mask
+
+    def extract(self, boxed_rgb: np.ndarray, meta: LetterboxMeta) -> Optional[Tuple[List[Dict[str, float]], float]]:
+        """
+        Devuelve (landmarks_en_coordenadas_originales, visibilidad_promedio)
+        o None si no se detectó ninguna persona.
+        """
+        res = self.extract_with_mask(boxed_rgb, meta)
+        if res is None:
+            return None
+        landmarks, mean_vis, _ = res
         return landmarks, mean_vis

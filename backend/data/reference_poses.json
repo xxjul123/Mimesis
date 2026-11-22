@@ -1,5 +1,5 @@
 {
-  "_comment": "Landmarks y ángulos reales extraídos de las 3 fotografías de esculturas (BlazePose + refinamiento supervisado en bronce/mármol).",
+  "_comment": "Landmarks, ángulos y máscaras de referencia extraídos de las 3 fotografías de esculturas (BlazePose + refinamiento supervisado).",
   "belalcazar": {
     "angles": {
       "head_tilt": 4.51,
@@ -215,7 +215,9 @@
         "visibility": 0.99
       }
     ],
-    "mean_visibility": 0.765
+    "mean_visibility": 0.765,
+    "mask_file": "reference_masks/belalcazar.png",
+    "mask_source": "blazepose_morph"
   },
   "discobolo": {
     "angles": {
@@ -432,7 +434,9 @@
         "visibility": 0.9552
       }
     ],
-    "mean_visibility": 0.9
+    "mean_visibility": 0.9,
+    "mask_file": "reference_masks/discobolo.png",
+    "mask_source": "blazepose_morph"
   },
   "shakespeare": {
     "angles": {
@@ -649,6 +653,8 @@
         "visibility": 0.8277
       }
     ],
-    "mean_visibility": 0.856
+    "mean_visibility": 0.856,
+    "mask_file": "reference_masks/shakespeare.png",
+    "mask_source": "blazepose_morph"
   }
 }

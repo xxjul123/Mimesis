@@ -14,6 +14,7 @@
         { name: "Jugador 2" }
     ];
     let selectedIndex = 0;
+    let gameMode = "challenge";
     let toastTimer = null;
 
     function notify(message) {
@@ -177,6 +178,21 @@
         });
     });
 
+    document.querySelectorAll(".mode-option").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            gameMode = btn.dataset.mode === "classify" ? "classify" : "challenge";
+            document.querySelectorAll(".mode-option").forEach((b) => {
+                b.classList.toggle("active", b.dataset.mode === gameMode);
+            });
+            const helper = $("mode-helper-text");
+            if (helper) {
+                helper.textContent = gameMode === "classify"
+                    ? "Modo Libre: cada jugador elige en secreto una de las 3 esculturas y el clasificador ML la identifica y califica automáticamente."
+                    : "Haz clic sobre cualquier nombre para editarlo. Cada jugador tendrá su turno y al cerrar la ronda se actualizará el ranking.";
+            }
+        });
+    });
+
     $("start-game").addEventListener("click", () => {
         const cleanPlayers = players.map((p, i) => ({
             name: (p.name || "").trim() || `Jugador ${i + 1}`,
@@ -192,6 +208,7 @@
 
         const gameState = {
             players: cleanPlayers,
+            gameMode,
             sculptureId: sculptures[selectedIndex].id,
             sculpture: sculptures[selectedIndex],
             currentPlayer: 0,

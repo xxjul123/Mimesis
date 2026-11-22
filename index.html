@@ -66,7 +66,21 @@
                 + Agregar participante
             </button>
 
-            <p class="helper-text">
+            <div class="mode-selector">
+                <span class="plaque-label">Modo de partida</span>
+                <div class="mode-options" role="radiogroup" aria-label="Modo de partida">
+                    <button type="button" class="mode-option active" data-mode="challenge">
+                        <strong>Modo Reto</strong>
+                        <small>Todos imitan la obra elegida por ronda.</small>
+                    </button>
+                    <button type="button" class="mode-option" data-mode="classify">
+                        <strong>Modo Libre</strong>
+                        <small>Eliges en secreto y el modelo adivina la obra.</small>
+                    </button>
+                </div>
+            </div>
+
+            <p class="helper-text" id="mode-helper-text">
                 Haz clic sobre cualquier nombre para editarlo. Cada jugador tendrá su turno y al cerrar la ronda se actualizará el ranking.
             </p>
         </aside>

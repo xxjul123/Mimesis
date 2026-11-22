@@ -36,9 +36,9 @@
 <main class="page-main">
     <section class="page-intro">
         <div>
-            <span class="eyebrow">Imitación corporal</span>
-            <h2>Observa la obra y entra en pose.</h2>
-            <p>Captura una única fotografía con la cámara o sube una imagen de prueba para evaluarla con el pipeline PDI + BlazePose + MLP.</p>
+            <span class="eyebrow" id="game-mode-eyebrow">Imitación corporal · Modo Reto</span>
+            <h2 id="game-intro-title">Observa la obra y entra en pose.</h2>
+            <p id="game-intro-desc">Captura una única fotografía con la cámara o sube una imagen de prueba para evaluarla con el pipeline PDI + BlazePose + Segmentación + MLP.</p>
         </div>
         <div class="meta-pill">
             Ronda <strong id="round-number">01</strong> · <span id="turn-counter">TURNO 1</span>
@@ -122,13 +122,22 @@
 
                 <div class="results-compare-grid">
                     <div class="visual-card">
-                        <h4>Tu pose · Esqueleto por zona</h4>
+                        <div class="visual-card-head">
+                            <h4>Tu pose</h4>
+                            <div class="view-mode-bar" role="group" aria-label="Modo de visualización de tu pose">
+                                <button type="button" class="view-pill active" data-view="segments">Segmentos</button>
+                                <button type="button" class="view-pill" data-view="heatmap">Mapa de calor</button>
+                                <button type="button" class="view-pill" data-view="sculpture" id="sculpture-view-btn">Escultura</button>
+                            </div>
+                        </div>
                         <div class="visual-stage" id="player-result-stage">
                             <div class="visual-placeholder">El esqueleto se dibujará aquí.</div>
                         </div>
                     </div>
                     <div class="visual-card">
-                        <h4>Escultura de referencia · Esqueleto base</h4>
+                        <div class="visual-card-head">
+                            <h4 id="reference-stage-title">Escultura de referencia · Esqueleto base</h4>
+                        </div>
                         <div class="visual-stage" id="reference-result-stage">
                             <img id="reference-result-image" alt="Obra de referencia">
                         </div>
@@ -143,12 +152,27 @@
                     </div>
                 </div>
 
+                <div class="classifier-section" id="classifier-section">
+                    <div class="classifier-head">
+                        <h4>Clasificación automática de obra</h4>
+                        <span class="classifier-prediction" id="classifier-prediction">Sin evaluar</span>
+                    </div>
+                    <div id="classifier-probs"></div>
+                </div>
+
                 <div class="heatmap-section">
-                    <h4>Similitud por región corporal</h4>
+                    <h4>Mapa de calor · Similitud por región corporal</h4>
                     <div id="heatmap-regions"></div>
                 </div>
 
-                <div class="pdi-diagnostics" aria-label="Métricas de preprocesamiento PDI">
+                <div class="pdi-header-row">
+                    <h4>Diagnóstico PDI y Segmentación</h4>
+                    <button type="button" class="btn btn-ghost btn-sm" id="open-inspector-btn" disabled>
+                        Ver Pipeline PDI
+                    </button>
+                </div>
+
+                <div class="pdi-diagnostics grid-5" aria-label="Métricas de preprocesamiento PDI y segmentación">
                     <div class="pdi-metric">
                         <small>Nitidez (Laplaciano)</small>
                         <strong id="pdi-sharpness">—</strong>
@@ -160,6 +184,14 @@
                     <div class="pdi-metric">
                         <small>Confianza BlazePose</small>
                         <strong id="pdi-confidence">—</strong>
+                    </div>
+                    <div class="pdi-metric">
+                        <small>Silueta IoU (diag.)</small>
+                        <strong id="pdi-iou">—</strong>
+                    </div>
+                    <div class="pdi-metric">
+                        <small>Momentos de Hu</small>
+                        <strong id="pdi-hu">—</strong>
                     </div>
                 </div>
 
@@ -202,14 +234,22 @@
                 </div>
             </section>
 
-            <section class="panel">
+            <section class="panel" id="side-sculpture-panel">
                 <div class="panel-heading">
-                    <h3>Obra asignada</h3>
+                    <h3 id="side-sculpture-heading">Obra asignada</h3>
                 </div>
-                <img class="side-sculpture-img" id="sculpture-image" alt="Escultura asignada">
-                <h4 class="plaque-title" id="sculpture-title" style="font-size:21px;"></h4>
-                <p class="plaque-author" id="sculpture-author" style="margin-bottom:10px;"></p>
-                <span class="emotion-badge" id="sculpture-emotion"></span>
+                <div id="challenge-sculpture-box">
+                    <img class="side-sculpture-img" id="sculpture-image" alt="Escultura asignada">
+                    <h4 class="plaque-title" id="sculpture-title" style="font-size:21px;"></h4>
+                    <p class="plaque-author" id="sculpture-author" style="margin-bottom:10px;"></p>
+                    <span class="emotion-badge" id="sculpture-emotion"></span>
+                </div>
+                <div id="free-mode-box" hidden>
+                    <p style="font-size:12px;color:var(--muted);line-height:1.5;margin:0;">
+                        Elige <strong>en secreto</strong> una de estas 3 esculturas e imítala frente a la cámara. El clasificador ML intentará adivinar cuál elegiste.
+                    </p>
+                    <div class="free-mode-gallery" id="free-mode-gallery"></div>
+                </div>
             </section>
         </aside>
     </div>
@@ -219,6 +259,23 @@
         <button type="button" class="btn btn-ghost" id="back-button">← Volver a la sala</button>
     </footer>
 </main>
+
+<!-- MODAL INSPECTOR PIPELINE PDI -->
+<div class="modal-backdrop" id="inspector-modal" role="dialog" aria-modal="true" aria-labelledby="inspector-title">
+    <div class="modal-card inspector-modal-card">
+        <span class="eyebrow">Evidencia técnica · OpenCV + MediaPipe + ML</span>
+        <h3 id="inspector-title">Inspector del Pipeline PDI</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:4px;">
+            Transformaciones aplicadas en tiempo real sobre la fotografía capturada antes y después de la estimación de pose.
+        </p>
+
+        <div class="inspector-grid" id="inspector-grid"></div>
+
+        <div class="modal-actions">
+            <button type="button" class="btn btn-primary" id="close-inspector-btn">Cerrar inspector</button>
+        </div>
+    </div>
+</div>
 
 <!-- MODAL DE RANKING -->
 <div class="modal-backdrop" id="ranking-modal" role="dialog" aria-modal="true" aria-labelledby="ranking-title">
