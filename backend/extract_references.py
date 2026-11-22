@@ -96,41 +96,59 @@ SCORING_LANDMARKS: Dict[int, Tuple[str, str]] = {
     28: ("28:Tobillo D", "pierna_der"),
 }
 
-# Correcciones supervisadas (en coordenadas normalizadas [0, 1]) para extremidades
-# donde BlazePose se desvía por tratarse de bronce/mármol en lugar de piel humana.
-SUPERVISED_OVERRIDES: Dict[str, Dict[int, Tuple[float, float]]] = {
-    "discobolo":{
-        14: (0.410, 0.115),  # codo derecho levantado hacia el disco
-        16: (0.255, 0.055),  # muñeca derecha sosteniendo el disco
+# Correcciones supervisadas (en coordenadas normalizadas [0, 1]) para puntos
+# donde BlazePose se desvía por tratarse de bronce/mármol o por oclusión en perfil.
+# Cada tupla puede ser (x, y) [visibilidad=0.99] o (x, y, visibility) [ej. 0.0 si está ocluido].
+SUPERVISED_OVERRIDES: Dict[str, Dict[int, Tuple[float, ...]]] = {
+    "discobolo": {
+        0: (0.708, 0.244),        # nariz (punta real)
+        8: (0.696, 0.197),        # oreja derecha visible
+        7: (0.715, 0.215, 0.0),   # oreja izquierda oculta detrás de la cabeza (perfil)
+        14: (0.410, 0.115),       # codo derecho levantado hacia el disco
+        16: (0.255, 0.055),       # muñeca derecha sosteniendo el disco
         18: (0.230, 0.045),
         20: (0.225, 0.040),
         22: (0.240, 0.050),
-        13: (0.695, 0.465),  # codo izquierdo
-        15: (0.585, 0.615),  # muñeca izquierda (sobre la rodilla)
+        13: (0.695, 0.465),       # codo izquierdo
+        15: (0.585, 0.615),       # muñeca izquierda (sobre la rodilla)
+        24: (0.490, 0.472),       # cadera derecha (pierna delantera apoyada)
+        26: (0.585, 0.638),       # rodilla derecha (delantera)
+        23: (0.525, 0.476),       # cadera izquierda (pierna trasera)
+        25: (0.560, 0.665),       # rodilla izquierda (trasera)
     },
     "belalcazar": {
-        12: (0.432, 0.272),  # hombro derecho (brazo que señala)
-        14: (0.340, 0.278),  # codo derecho
-        16: (0.222, 0.255),  # muñeca derecha
+        0: (0.535, 0.218),        # nariz (punta real)
+        8: (0.497, 0.215),        # oreja derecha visible
+        7: (0.515, 0.215, 0.0),   # oreja izquierda oculta detrás de la cabeza (perfil 3/4)
+        12: (0.432, 0.272),       # hombro derecho (brazo que señala)
+        14: (0.340, 0.278),       # codo derecho
+        16: (0.222, 0.255),       # muñeca derecha
         18: (0.175, 0.245),
         20: (0.165, 0.242),
         22: (0.185, 0.250),
-        11: (0.538, 0.285),  # hombro izquierdo (brazo sobre la espada)
-        13: (0.562, 0.345),  # codo izquierdo
-        15: (0.578, 0.378),  # muñeca izquierda en la empuñadura
+        11: (0.538, 0.285),       # hombro izquierdo (brazo sobre la espada)
+        13: (0.562, 0.345),       # codo izquierdo
+        15: (0.578, 0.378),       # muñeca izquierda en la empuñadura
         17: (0.582, 0.395),
         19: (0.580, 0.395),
         21: (0.575, 0.390),
-        24: (0.468, 0.485),  # cadera derecha (pierna recta)
-        26: (0.456, 0.618),  # rodilla derecha
-        28: (0.445, 0.735),  # tobillo derecho
+        24: (0.468, 0.485),       # cadera derecha (pierna recta)
+        26: (0.456, 0.618),       # rodilla derecha
+        28: (0.445, 0.735),       # tobillo derecho
         30: (0.432, 0.752),
         32: (0.485, 0.762),
-        23: (0.535, 0.485),  # cadera izquierda (pierna doblada sobre roca)
-        25: (0.625, 0.555),  # rodilla izquierda flexionada
-        27: (0.518, 0.615),  # tobillo izquierdo apoyado en bloque
+        23: (0.535, 0.485),       # cadera izquierda (pierna doblada sobre roca)
+        25: (0.625, 0.555),       # rodilla izquierda flexionada
+        27: (0.518, 0.615),       # tobillo izquierdo apoyado en bloque
         29: (0.502, 0.612),
         31: (0.542, 0.665),
+    },
+    "shakespeare": {
+        0: (0.486, 0.072),        # nariz (punta real)
+        8: (0.438, 0.082),        # oreja derecha visible
+        7: (0.465, 0.078, 0.0),   # oreja izquierda oculta detrás de la cabeza (perfil 3/4)
+        14: (0.365, 0.328),       # codo derecho doblado hacia atrás
+        16: (0.425, 0.365),       # muñeca derecha detrás de la cintura
     },
 }
 
@@ -345,10 +363,12 @@ def extract_for_sculpture(extractor: PoseExtractor, sid: str, img_bgr):
         lms, vis = res
 
     # Aplicar correcciones supervisadas si existen para esta estatua
-    for idx, (nx, ny) in SUPERVISED_OVERRIDES.get(sid, {}).items():
+    for idx, coords in SUPERVISED_OVERRIDES.get(sid, {}).items():
+        nx, ny = coords[0], coords[1]
+        override_vis = coords[2] if len(coords) >= 3 else 0.99
         lms[idx]["x"] = round(nx, 5)
         lms[idx]["y"] = round(ny, 5)
-        lms[idx]["visibility"] = 0.99
+        lms[idx]["visibility"] = round(float(override_vis), 4)
 
     return lms, vis
 

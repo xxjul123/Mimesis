@@ -84,6 +84,32 @@ def _line_angle_horizontal(p_left: np.ndarray, p_right: np.ndarray) -> float:
     return float(abs(math.degrees(math.atan2(vec[1], abs(vec[0]) + 1e-6))))
 
 
+def _compute_head_tilt(landmarks: List[Dict[str, float]], pts: np.ndarray) -> float:
+    """
+    Calcula la inclinación de la cabeza (0..90°):
+    - Vista frontal (ambas orejas 7 y 8 visibles y separadas horizontalmente):
+      usa la línea entre Oreja I (7) y Oreja D (8).
+    - Vista de perfil / 3/4 (una oreja oculta o comprimida horizontalmente):
+      usa la línea desde la oreja visible hacia la nariz (0) para evitar ruido.
+    """
+    vis_l = float(landmarks[7].get("visibility", 1.0)) if len(landmarks) > 7 else 0.0
+    vis_r = float(landmarks[8].get("visibility", 1.0)) if len(landmarks) > 8 else 0.0
+
+    shoulder_width = float(np.linalg.norm(pts[11] - pts[12]))
+    ear_dx = float(abs(pts[7][0] - pts[8][0]))
+
+    both_ears_clear = (
+        vis_l >= 0.45
+        and vis_r >= 0.45
+        and (shoulder_width < 1e-4 or ear_dx >= 0.20 * shoulder_width)
+    )
+    if both_ears_clear:
+        return _line_angle_horizontal(pts[7], pts[8])
+
+    best_ear = 7 if vis_l >= vis_r else 8
+    return _line_angle_horizontal(pts[best_ear], pts[0])
+
+
 def extract_geometric_features(landmarks: List[Dict[str, float]]) -> Tuple[Dict[str, float], np.ndarray]:
     """
     Convierte los 33 landmarks normalizados en:
@@ -96,7 +122,7 @@ def extract_geometric_features(landmarks: List[Dict[str, float]]) -> Tuple[Dict[
     mid_hip = (pts[23] + pts[24]) / 2.0
 
     angles: Dict[str, float] = {
-        "head_tilt": _line_angle_horizontal(pts[7], pts[8]),
+        "head_tilt": _compute_head_tilt(landmarks, pts),
         "neck_angle": _line_angle_vertical(pts[0], mid_shoulder),
         "torso_lean": _line_angle_vertical(mid_shoulder, mid_hip),
         "shoulder_level": _line_angle_horizontal(pts[11], pts[12]),

@@ -55,19 +55,51 @@
     let countdownTimer = null;
     let toastTimer = null;
 
-    /* Conexiones de los 33 landmarks de MediaPipe agrupadas por región corporal */
-    const REGION_CONNECTIONS = {
-        head: [[0, 7], [0, 8], [7, 11], [8, 12]],
-        torso: [[11, 12], [11, 23], [12, 24], [23, 24]],
-        arms: [
-            [11, 13], [13, 15], [15, 17], [15, 19], [15, 21],
-            [12, 14], [14, 16], [16, 18], [16, 20], [16, 22]
-        ],
-        legs: [
-            [23, 25], [25, 27], [27, 29], [27, 31],
-            [24, 26], [26, 28], [28, 30], [28, 32]
-        ]
+    /* Colores y definiciones de los 15 landmarks usados para calificar (coincide con extract_references.py) */
+    const SEGMENT_COLORS = {
+        cabeza: "#ffd71e",     // Amarillo dorado
+        torso: "#ebebeb",      // Blanco / plata
+        brazo_izq: "#32d7ff",  // Cian
+        brazo_der: "#ff6e41",  // Naranja / coral
+        pierna_izq: "#73eb5f", // Verde brillante
+        pierna_der: "#dc64eb"  // Magenta / violeta
     };
+
+    const SEGMENT_LEGEND_NAMES = {
+        cabeza: "Cabeza",
+        torso: "Torso",
+        brazo_izq: "Brazo Izq",
+        brazo_der: "Brazo Der",
+        pierna_izq: "Pierna Izq",
+        pierna_der: "Pierna Der"
+    };
+
+    const SEGMENT_CONNECTIONS = [
+        [0, 7, "cabeza"], [0, 8, "cabeza"], [7, 11, "cabeza"], [8, 12, "cabeza"],
+        [11, 12, "torso"], [11, 23, "torso"], [12, 24, "torso"], [23, 24, "torso"],
+        [11, 13, "brazo_izq"], [13, 15, "brazo_izq"],
+        [12, 14, "brazo_der"], [14, 16, "brazo_der"],
+        [23, 25, "pierna_izq"], [25, 27, "pierna_izq"],
+        [24, 26, "pierna_der"], [26, 28, "pierna_der"]
+    ];
+
+    const SCORING_LANDMARKS = [
+        [0, "0:Nariz", "cabeza"],
+        [7, "7:Oreja I", "cabeza"],
+        [8, "8:Oreja D", "cabeza"],
+        [11, "11:Hombro I", "brazo_izq"],
+        [12, "12:Hombro D", "brazo_der"],
+        [13, "13:Codo I", "brazo_izq"],
+        [14, "14:Codo D", "brazo_der"],
+        [15, "15:Muñeca I", "brazo_izq"],
+        [16, "16:Muñeca D", "brazo_der"],
+        [23, "23:Cadera I", "pierna_izq"],
+        [24, "24:Cadera D", "pierna_der"],
+        [25, "25:Rodilla I", "pierna_izq"],
+        [26, "26:Rodilla D", "pierna_der"],
+        [27, "27:Tobillo I", "pierna_izq"],
+        [28, "28:Tobillo D", "pierna_der"]
+    ];
 
     function scoreTier(value) {
         if (typeof value !== "number" || !Number.isFinite(value)) return "na";
@@ -170,32 +202,125 @@
 
     /* ================= CÁMARA Y SUBIDA DE FOTO ================= */
 
-    async function startCamera() {
+    let selectedDeviceId = "";
+    let cameraRotation = 0; // 0, 90, 180, 270 grados
+    let mirrorCamera = true; // Efecto espejo por defecto (ideal para selfie)
+
+    function updateVideoTransform() {
+        const video = $("camera-video");
+        const frame = video.closest(".camera-frame");
+        const vw = video.videoWidth || 0;
+        const vh = video.videoHeight || 0;
+        const swapped = cameraRotation === 90 || cameraRotation === 270;
+        const effectiveW = swapped ? vh : vw;
+        const effectiveH = swapped ? vw : vh;
+        const isPortrait = effectiveH > effectiveW && effectiveH > 0;
+
+        if (frame) {
+            frame.classList.toggle("portrait", isPortrait);
+        }
+
+        const parts = [];
+        if (mirrorCamera) parts.push("scaleX(-1)");
+        if (cameraRotation !== 0) parts.push(`rotate(${cameraRotation}deg)`);
+        video.style.transform = parts.join(" ");
+
+        $("rotate-btn").textContent = `Rotar ${cameraRotation}°`;
+        $("mirror-btn").textContent = `Espejo: ${mirrorCamera ? "Sí" : "No"}`;
+        $("mirror-btn").classList.toggle("active", mirrorCamera);
+    }
+
+    async function refreshCameraList(activeDeviceId = null) {
+        const select = $("camera-select");
+        if (!select || !navigator.mediaDevices?.enumerateDevices) return;
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const cameras = devices.filter((d) => d.kind === "videoinput");
+            const prevValue = activeDeviceId || selectedDeviceId || select.value;
+
+            select.innerHTML = "";
+            if (cameras.length === 0) {
+                const opt = document.createElement("option");
+                opt.value = "";
+                opt.textContent = "Sin cámaras detectadas";
+                select.appendChild(opt);
+                selectedDeviceId = "";
+                return;
+            }
+
+            cameras.forEach((cam, idx) => {
+                const opt = document.createElement("option");
+                opt.value = cam.deviceId;
+                opt.textContent = cam.label || `Cámara ${idx + 1}`;
+                select.appendChild(opt);
+            });
+
+            if (prevValue && cameras.some((c) => c.deviceId === prevValue)) {
+                select.value = prevValue;
+                selectedDeviceId = prevValue;
+            } else {
+                selectedDeviceId = cameras[0].deviceId;
+                select.value = selectedDeviceId;
+            }
+        } catch {
+            // Ignorar si el navegador aún no permite enumerar dispositivos
+        }
+    }
+
+    async function startCamera(explicitDeviceId = null) {
         if (!navigator.mediaDevices?.getUserMedia) {
             notify("El navegador requiere HTTPS o localhost para usar la cámara.");
             return;
         }
+
+        // Cerrar stream anterior si estamos cambiando de cámara en vivo
+        if (stream) {
+            stream.getTracks().forEach((t) => t.stop());
+            stream = null;
+        }
+
+        const targetId = explicitDeviceId ?? ($("camera-select")?.value || selectedDeviceId);
+        // No forzar resolución cuando se elige un dispositivo concreto (evita pantalla verde en cámaras virtuales como DroidCam)
+        const videoConstraints = targetId
+            ? { deviceId: { exact: targetId } }
+            : { facingMode: "user" };
+
         try {
             stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
+                video: videoConstraints,
                 audio: false
             });
-            $("camera-video").srcObject = stream;
-            $("camera-video").hidden = false;
+            const track = stream.getVideoTracks()[0];
+            const activeId = track?.getSettings?.().deviceId || targetId || "";
+            selectedDeviceId = activeId;
+
+            const video = $("camera-video");
+            video.srcObject = stream;
+            video.hidden = false;
+            video.onloadedmetadata = () => updateVideoTransform();
+            updateVideoTransform();
+
             $("camera-placeholder").hidden = true;
             $("camera-hud").hidden = false;
             $("captured-image").hidden = true;
-            $("camera-status").textContent = "Cámara activa";
+            $("camera-status").textContent = track?.label ? `Activa · ${track.label}` : "Cámara activa";
             $("camera-btn").textContent = "Desactivar cámara";
             $("capture-btn").disabled = false;
             captured = false;
             $("retake-btn").hidden = true;
             $("result-panel").classList.remove("visible");
+
+            await refreshCameraList(activeId);
         } catch (err) {
+            // Si falló con un deviceId guardado (ej. celular desconectado), reintentar con la predeterminada
+            if (targetId && (err.name === "OverconstrainedError" || err.name === "NotFoundError")) {
+                selectedDeviceId = "";
+                return startCamera("");
+            }
             notify(
                 err.name === "NotAllowedError"
                     ? "Permiso de cámara denegado."
-                    : "No se pudo conectar con la cámara."
+                    : "No se pudo conectar con la cámara seleccionada."
             );
         }
     }
@@ -260,13 +385,21 @@
             $("camera-btn").disabled = false;
             return;
         }
+
+        const vw = video.videoWidth;
+        const vh = video.videoHeight;
+        const swapped = cameraRotation === 90 || cameraRotation === 270;
         const canvas = $("capture-canvas");
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        canvas.width = swapped ? vh : vw;
+        canvas.height = swapped ? vw : vh;
+
         const ctx = canvas.getContext("2d");
-        ctx.translate(canvas.width, 0);
-        ctx.scale(-1, 1);
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        ctx.save();
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        if (mirrorCamera) ctx.scale(-1, 1);
+        if (cameraRotation !== 0) ctx.rotate((cameraRotation * Math.PI) / 180);
+        ctx.drawImage(video, -vw / 2, -vh / 2, vw, vh);
+        ctx.restore();
 
         const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
         canvas.toBlob((blob) => showCapturedImage(dataUrl, blob), "image/jpeg", 0.92);
@@ -302,7 +435,62 @@
         renderPdiDiagnostics(null);
     }
 
-    function drawPoseOverlay(container, imageUrl, landmarks, regions, uniformColor = null) {
+    function boxesOverlap(a, b, pad = 4) {
+        return !(
+            a.x1 + pad < b.x0 ||
+            b.x1 + pad < a.x0 ||
+            a.y1 + pad < b.y0 ||
+            b.y1 + pad < a.y0
+        );
+    }
+
+    function drawSegmentLegend(ctx, scale) {
+        const fontSize = Math.max(11, Math.round(13 * scale));
+        const padX = Math.max(8, Math.round(10 * scale));
+        const padY = Math.max(6, Math.round(8 * scale));
+        const swatchR = Math.max(4, Math.round(5.5 * scale));
+        const rowGap = Math.max(5, Math.round(7 * scale));
+        const rowH = fontSize + rowGap;
+
+        ctx.font = `600 ${fontSize}px system-ui, -apple-system, sans-serif`;
+        const entries = Object.entries(SEGMENT_COLORS).map(([seg, color]) => ({
+            name: SEGMENT_LEGEND_NAMES[seg],
+            color
+        }));
+
+        const maxTw = Math.max(...entries.map((e) => ctx.measureText(e.name).width));
+        const x0 = padX;
+        const y0 = padY;
+        const boxW = padX * 2 + swatchR * 2 + Math.round(8 * scale) + maxTw;
+        const boxH = padY * 2 + rowH * entries.length - Math.round(rowGap / 2);
+
+        ctx.fillStyle = "rgba(18, 17, 15, 0.78)";
+        ctx.fillRect(x0, y0, boxW, boxH);
+        ctx.strokeStyle = "rgba(140, 140, 140, 0.85)";
+        ctx.lineWidth = Math.max(1, 1.2 * scale);
+        ctx.strokeRect(x0, y0, boxW, boxH);
+
+        ctx.textBaseline = "middle";
+        entries.forEach((entry, i) => {
+            const cy = y0 + padY + i * rowH + fontSize * 0.5;
+            const cx = x0 + padX + swatchR;
+
+            ctx.beginPath();
+            ctx.arc(cx, cy, swatchR, 0, Math.PI * 2);
+            ctx.fillStyle = entry.color;
+            ctx.fill();
+            ctx.lineWidth = Math.max(1, 1.2 * scale);
+            ctx.strokeStyle = "#12110f";
+            ctx.stroke();
+
+            ctx.fillStyle = "#f5f5f5";
+            ctx.fillText(entry.name, cx + swatchR + Math.round(8 * scale), cy);
+        });
+
+        return { x0, y0, x1: x0 + boxW, y1: y0 + boxH };
+    }
+
+    function drawPoseOverlay(container, imageUrl, landmarks) {
         container.innerHTML = "";
         const img = new Image();
         img.crossOrigin = "anonymous";
@@ -321,38 +509,164 @@
             if (Array.isArray(landmarks) && landmarks.length) {
                 const w = canvas.width;
                 const h = canvas.height;
-                const lineW = Math.max(2.5, Math.min(w, h) * 0.0055);
-                const dotR = Math.max(3.5, Math.min(w, h) * 0.0075);
+                const scale = Math.max(0.65, Math.max(w, h) / 1200);
+                const lineW = Math.max(2.5, 4.2 * scale);
+                const outlineW = lineW + Math.max(2, 2.8 * scale);
+                const dotR = Math.max(4.5, 6.5 * scale);
 
-                Object.entries(REGION_CONNECTIONS).forEach(([regionKey, pairs]) => {
-                    const raw = regions?.[regionKey];
-                    const val = typeof raw === "number" ? raw : raw?.similarity;
-                    ctx.strokeStyle = uniformColor || tierColor(scoreTier(val));
+                // 1. Conexiones coloreadas por segmento (con borde oscuro)
+                ctx.lineCap = "round";
+                SEGMENT_CONNECTIONS.forEach(([a, b, segment]) => {
+                    const pA = landmarks[a];
+                    const pB = landmarks[b];
+                    if (!pA || !pB) return;
+                    if ((pA.visibility ?? 1) < 0.3 || (pB.visibility ?? 1) < 0.3) return;
+
+                    const x1 = pA.x * w;
+                    const y1 = pA.y * h;
+                    const x2 = pB.x * w;
+                    const y2 = pB.y * h;
+
+                    ctx.strokeStyle = "#12110f";
+                    ctx.lineWidth = outlineW;
+                    ctx.beginPath();
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.stroke();
+
+                    ctx.strokeStyle = SEGMENT_COLORS[segment];
                     ctx.lineWidth = lineW;
-                    ctx.lineCap = "round";
-
-                    pairs.forEach(([a, b]) => {
-                        const pA = landmarks[a];
-                        const pB = landmarks[b];
-                        if (!pA || !pB) return;
-                        if ((pA.visibility ?? 1) < 0.3 || (pB.visibility ?? 1) < 0.3) return;
-                        ctx.beginPath();
-                        ctx.moveTo(pA.x * w, pA.y * h);
-                        ctx.lineTo(pB.x * w, pB.y * h);
-                        ctx.stroke();
-                    });
+                    ctx.beginPath();
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.stroke();
                 });
 
-                landmarks.forEach((pt) => {
-                    if (typeof pt.x !== "number" || typeof pt.y !== "number") return;
+                // 2. Solo los 15 puntos clave usados para calificar
+                const visiblePoints = [];
+                SCORING_LANDMARKS.forEach(([idx, label, segment]) => {
+                    const pt = landmarks[idx];
+                    if (!pt || typeof pt.x !== "number" || typeof pt.y !== "number") return;
                     if ((pt.visibility ?? 1) < 0.3) return;
+
+                    const px = pt.x * w;
+                    const py = pt.y * h;
+                    const color = SEGMENT_COLORS[segment];
+
                     ctx.beginPath();
-                    ctx.arc(pt.x * w, pt.y * h, dotR, 0, Math.PI * 2);
-                    ctx.fillStyle = "#f3eee6";
+                    ctx.arc(px, py, dotR, 0, Math.PI * 2);
+                    ctx.fillStyle = color;
                     ctx.fill();
-                    ctx.lineWidth = Math.max(1.5, lineW * 0.45);
+                    ctx.lineWidth = Math.max(1.5, 2 * scale);
                     ctx.strokeStyle = "#12110f";
                     ctx.stroke();
+
+                    visiblePoints.push({ idx, label, segment, color, px, py });
+                });
+
+                // 3. Leyenda en esquina superior izquierda
+                const legendBox = drawSegmentLegend(ctx, scale);
+
+                // 4. Etiquetas legibles sin solapamiento
+                const fontSize = Math.max(10, Math.round(12 * scale));
+                const padX = Math.max(5, Math.round(6 * scale));
+                const padY = Math.max(3, Math.round(4 * scale));
+                const margin = Math.max(6, Math.round(8 * scale));
+                const baseD = Math.max(14, Math.round(18 * scale));
+
+                ctx.font = `600 ${fontSize}px system-ui, -apple-system, sans-serif`;
+                ctx.textBaseline = "middle";
+
+                const bodyCx = visiblePoints.reduce((acc, p) => acc + p.px, 0) / Math.max(1, visiblePoints.length);
+                const placedBoxes = [legendBox];
+                const pointBoxes = visiblePoints.map((p) => ({
+                    x0: p.px - dotR - 2,
+                    y0: p.py - dotR - 2,
+                    x1: p.px + dotR + 2,
+                    y1: p.py + dotR + 2
+                }));
+
+                const ordered = [...visiblePoints].sort((a, b) => {
+                    const ga = a.segment === "cabeza" ? 0 : 1;
+                    const gb = b.segment === "cabeza" ? 0 : 1;
+                    return ga - gb || a.py - b.py || a.px - b.px;
+                });
+
+                ordered.forEach((p) => {
+                    const tw = ctx.measureText(p.label).width;
+                    const boxW = tw + padX * 2;
+                    const boxH = fontSize + padY * 2;
+
+                    const horizDirs = p.px >= bodyCx ? [1, -1] : [-1, 1];
+                    const candidates = [];
+                    [1.0, 2.2, 3.6, 5.2, 7.0].forEach((mult) => {
+                        const d = baseD * mult;
+                        horizDirs.forEach((hdir) => {
+                            const bx = hdir > 0 ? p.px + d : p.px - d - boxW;
+                            candidates.push([bx, p.py - boxH / 2]);
+                            candidates.push([bx, p.py - boxH - d * 0.45]);
+                            candidates.push([bx, p.py + d * 0.45]);
+                        });
+                        candidates.push([p.px - boxW / 2, p.py - d - boxH]);
+                        candidates.push([p.px - boxW / 2, p.py + d]);
+                    });
+
+                    let chosen = null;
+                    for (const [bx, by] of candidates) {
+                        const x0 = Math.max(margin, Math.min(w - margin - boxW, bx));
+                        const y0 = Math.max(margin, Math.min(h - margin - boxH, by));
+                        const cand = { x0, y0, x1: x0 + boxW, y1: y0 + boxH };
+                        if (placedBoxes.some((pb) => boxesOverlap(cand, pb, 4))) continue;
+                        if (pointBoxes.some((ptb) => boxesOverlap(cand, ptb, 2))) continue;
+                        chosen = cand;
+                        break;
+                    }
+
+                    if (!chosen) {
+                        for (const [bx, by] of candidates) {
+                            const x0 = Math.max(margin, Math.min(w - margin - boxW, bx));
+                            const y0 = Math.max(margin, Math.min(h - margin - boxH, by));
+                            const cand = { x0, y0, x1: x0 + boxW, y1: y0 + boxH };
+                            if (!placedBoxes.some((pb) => boxesOverlap(cand, pb, 2))) {
+                                chosen = cand;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!chosen) {
+                        const x0 = Math.max(margin, Math.min(w - margin - boxW, p.px + baseD));
+                        const y0 = Math.max(margin, Math.min(h - margin - boxH, p.py - boxH / 2));
+                        chosen = { x0, y0, x1: x0 + boxW, y1: y0 + boxH };
+                    }
+
+                    placedBoxes.push(chosen);
+
+                    const anchorX = Math.max(chosen.x0, Math.min(chosen.x1, p.px));
+                    const anchorY = Math.max(chosen.y0, Math.min(chosen.y1, p.py));
+
+                    ctx.strokeStyle = "#12110f";
+                    ctx.lineWidth = Math.max(2, 2.5 * scale);
+                    ctx.beginPath();
+                    ctx.moveTo(p.px, p.py);
+                    ctx.lineTo(anchorX, anchorY);
+                    ctx.stroke();
+
+                    ctx.strokeStyle = p.color;
+                    ctx.lineWidth = Math.max(1, 1.3 * scale);
+                    ctx.beginPath();
+                    ctx.moveTo(p.px, p.py);
+                    ctx.lineTo(anchorX, anchorY);
+                    ctx.stroke();
+
+                    ctx.fillStyle = "rgba(18, 17, 15, 0.82)";
+                    ctx.fillRect(chosen.x0, chosen.y0, boxW, boxH);
+                    ctx.strokeStyle = p.color;
+                    ctx.lineWidth = Math.max(1, 1.5 * scale);
+                    ctx.strokeRect(chosen.x0, chosen.y0, boxW, boxH);
+
+                    ctx.fillStyle = "#f8f8f8";
+                    ctx.fillText(p.label, chosen.x0 + padX, chosen.y0 + boxH / 2);
                 });
             }
 
@@ -422,7 +736,7 @@
 
         const baseImage = data.annotated_image || $("captured-image").src;
         if (Array.isArray(data.landmarks) && data.landmarks.length) {
-            drawPoseOverlay($("player-result-stage"), baseImage, data.landmarks, data.regions);
+            drawPoseOverlay($("player-result-stage"), baseImage, data.landmarks);
         } else {
             $("player-result-stage").innerHTML = "";
             const img = document.createElement("img");
@@ -434,9 +748,7 @@
             drawPoseOverlay(
                 $("reference-result-stage"),
                 game.sculpture.image,
-                data.reference_landmarks,
-                null,
-                "#c88d55"
+                data.reference_landmarks
             );
         }
 
@@ -575,6 +887,24 @@
 
     /* Eventos */
     $("camera-btn").addEventListener("click", () => (stream ? stopCamera() : startCamera()));
+    $("camera-select").addEventListener("change", (e) => {
+        selectedDeviceId = e.target.value;
+        if (stream) startCamera(selectedDeviceId);
+    });
+    $("refresh-cameras-btn").addEventListener("click", async () => {
+        await refreshCameraList();
+        notify("Lista de cámaras actualizada.");
+    });
+    $("rotate-btn").addEventListener("click", () => {
+        cameraRotation = (cameraRotation + 90) % 360;
+        updateVideoTransform();
+    });
+    $("mirror-btn").addEventListener("click", () => {
+        mirrorCamera = !mirrorCamera;
+        updateVideoTransform();
+    });
+    navigator.mediaDevices?.addEventListener?.("devicechange", () => refreshCameraList());
+
     $("capture-btn").addEventListener("click", beginCapture);
     $("upload-input").addEventListener("change", handleUpload);
     $("retake-btn").addEventListener("click", retake);
@@ -593,4 +923,5 @@
 
     renderGame();
     checkBackend();
+    refreshCameraList();
 })();

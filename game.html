@@ -74,6 +74,18 @@
                 <div class="countdown" id="countdown" aria-live="assertive">3</div>
             </div>
 
+            <div class="camera-device-bar">
+                <label class="camera-select-wrap" for="camera-select">
+                    <span>Cámara</span>
+                    <select id="camera-select" class="camera-select" aria-label="Seleccionar cámara">
+                        <option value="">Cámara predeterminada</option>
+                    </select>
+                </label>
+                <button type="button" class="btn btn-ghost btn-sm" id="refresh-cameras-btn" title="Buscar cámaras conectadas (PC o celular USB)">Actualizar</button>
+                <button type="button" class="btn btn-ghost btn-sm" id="rotate-btn" title="Rotar imagen 90° (útil para celular en vertical)">Rotar 0°</button>
+                <button type="button" class="btn btn-ghost btn-sm active" id="mirror-btn" title="Activar o desactivar efecto espejo (selfie)">Espejo: Sí</button>
+            </div>
+
             <div class="camera-actions">
                 <button type="button" class="btn" id="camera-btn">Activar cámara</button>
                 <button type="button" class="btn btn-primary" id="capture-btn" disabled>Tomar foto (3s)</button>

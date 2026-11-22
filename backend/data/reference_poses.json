@@ -2,8 +2,8 @@
   "_comment": "Landmarks y ángulos reales extraídos de las 3 fotografías de esculturas (BlazePose + refinamiento supervisado en bronce/mármol).",
   "belalcazar": {
     "angles": {
-      "head_tilt": 20.87,
-      "neck_angle": 32.68,
+      "head_tilt": 4.51,
+      "neck_angle": 39.57,
       "torso_lean": 4.57,
       "shoulder_level": 6.99,
       "left_elbow": 175.94,
@@ -17,10 +17,10 @@
     },
     "landmarks": [
       {
-        "x": 0.5193,
-        "y": 0.22503,
+        "x": 0.535,
+        "y": 0.218,
         "z": -0.08282,
-        "visibility": 0.964
+        "visibility": 0.99
       },
       {
         "x": 0.5165,
@@ -59,16 +59,16 @@
         "visibility": 0.9495
       },
       {
-        "x": 0.5043,
-        "y": 0.21573,
+        "x": 0.515,
+        "y": 0.215,
         "z": -0.17761,
-        "visibility": 0.9294
+        "visibility": 0.0
       },
       {
-        "x": 0.51479,
-        "y": 0.21973,
+        "x": 0.497,
+        "y": 0.215,
         "z": -0.28002,
-        "visibility": 0.8972
+        "visibility": 0.99
       },
       {
         "x": 0.51531,
@@ -219,25 +219,25 @@
   },
   "discobolo": {
     "angles": {
-      "head_tilt": 44.34,
-      "neck_angle": 78.03,
-      "torso_lean": 33.19,
+      "head_tilt": 75.68,
+      "neck_angle": 81.83,
+      "torso_lean": 30.29,
       "shoulder_level": 47.19,
       "left_elbow": 142.47,
       "right_elbow": 176.21,
-      "left_shoulder": 47.86,
-      "right_shoulder": 92.17,
-      "left_hip": 117.18,
-      "right_hip": 114.52,
-      "left_knee": 116.82,
-      "right_knee": 138.64
+      "left_shoulder": 47.21,
+      "right_shoulder": 97.03,
+      "left_hip": 123.58,
+      "right_hip": 132.29,
+      "left_knee": 127.24,
+      "right_knee": 157.89
     },
     "landmarks": [
       {
-        "x": 0.71776,
-        "y": 0.23699,
+        "x": 0.708,
+        "y": 0.244,
         "z": -0.52177,
-        "visibility": 0.9997
+        "visibility": 0.99
       },
       {
         "x": 0.73044,
@@ -276,16 +276,16 @@
         "visibility": 0.9997
       },
       {
-        "x": 0.72199,
-        "y": 0.21503,
+        "x": 0.715,
+        "y": 0.215,
         "z": -0.34821,
-        "visibility": 0.9997
+        "visibility": 0.0
       },
       {
-        "x": 0.70403,
-        "y": 0.19748,
+        "x": 0.696,
+        "y": 0.197,
         "z": -0.49316,
-        "visibility": 0.9997
+        "visibility": 0.99
       },
       {
         "x": 0.70406,
@@ -372,28 +372,28 @@
         "visibility": 0.99
       },
       {
-        "x": 0.5218,
-        "y": 0.47543,
+        "x": 0.525,
+        "y": 0.476,
         "z": 0.1591,
-        "visibility": 0.9989
+        "visibility": 0.99
       },
       {
-        "x": 0.46392,
-        "y": 0.47023,
+        "x": 0.49,
+        "y": 0.472,
         "z": -0.15891,
-        "visibility": 0.9995
+        "visibility": 0.99
       },
       {
-        "x": 0.57889,
-        "y": 0.67143,
+        "x": 0.56,
+        "y": 0.665,
         "z": 0.20342,
-        "visibility": 0.6969
+        "visibility": 0.99
       },
       {
-        "x": 0.61154,
-        "y": 0.63019,
+        "x": 0.585,
+        "y": 0.638,
         "z": -0.42203,
-        "visibility": 0.9814
+        "visibility": 0.99
       },
       {
         "x": 0.41446,
@@ -436,14 +436,14 @@
   },
   "shakespeare": {
     "angles": {
-      "head_tilt": 6.89,
-      "neck_angle": 14.07,
+      "head_tilt": 11.77,
+      "neck_angle": 15.04,
       "torso_lean": 6.86,
       "shoulder_level": 1.28,
       "left_elbow": 67.17,
-      "right_elbow": 63.08,
+      "right_elbow": 108.43,
       "left_shoulder": 30.37,
-      "right_shoulder": 21.26,
+      "right_shoulder": 27.07,
       "left_hip": 161.74,
       "right_hip": 165.97,
       "left_knee": 173.63,
@@ -451,10 +451,10 @@
     },
     "landmarks": [
       {
-        "x": 0.47747,
-        "y": 0.09686,
+        "x": 0.486,
+        "y": 0.072,
         "z": -0.39183,
-        "visibility": 0.9993
+        "visibility": 0.99
       },
       {
         "x": 0.47326,
@@ -493,16 +493,16 @@
         "visibility": 0.9982
       },
       {
-        "x": 0.46359,
-        "y": 0.09541,
+        "x": 0.465,
+        "y": 0.078,
         "z": -0.19431,
-        "visibility": 0.9985
+        "visibility": 0.0
       },
       {
-        "x": 0.44845,
-        "y": 0.09358,
+        "x": 0.438,
+        "y": 0.082,
         "z": -0.34479,
-        "visibility": 0.9982
+        "visibility": 0.99
       },
       {
         "x": 0.47496,
@@ -535,10 +535,10 @@
         "visibility": 0.7845
       },
       {
-        "x": 0.37869,
-        "y": 0.3249,
+        "x": 0.365,
+        "y": 0.328,
         "z": -0.44994,
-        "visibility": 0.7094
+        "visibility": 0.99
       },
       {
         "x": 0.63967,
@@ -547,10 +547,10 @@
         "visibility": 0.8483
       },
       {
-        "x": 0.44821,
-        "y": 0.30028,
+        "x": 0.425,
+        "y": 0.365,
         "z": -0.69174,
-        "visibility": 0.6337
+        "visibility": 0.99
       },
       {
         "x": 0.65347,
