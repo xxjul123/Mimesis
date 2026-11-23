@@ -2,7 +2,7 @@
 
 > **Procesamiento Digital de Imágenes (PDI · 2026-2)** · Universidad Autónoma de Occidente (UAO)  
 > **Docente:** Nicolás Llanos Neuta · **Temática:** *Análisis de la Expresión Humana en el Arte y la Cultura*  
-> **Autores:** Alejandro Quintero, Julián Ruiz y Sebastián Montaño
+> **Autores:** Alejandro Quintero, Julián Cruz y Sebastián Montaño
 
 ---
 
