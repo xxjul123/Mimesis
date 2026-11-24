@@ -248,4 +248,4 @@ Los prototipos visuales iniciales (4 pantallas clave: Sala, Imitación, Comparac
 | **Repositorio GitHub (código, documentación, tests y notebooks)** | Este repositorio (`https://github.com/xxjul123/Mimesis`) |
 | **Conjunto de datos real (329 fotos)** | *(`https://drive.google.com/drive/folders/12ouj1UgLeY2QxBVvt1PexEmZzn9NcmGD?usp=drive_link`)* |
 | **Video demostrativo** | *(`https://youtu.be/HbRlDu3siuI`)* |
-| **Póster académico** | *(`https://drive.google.com/file/d/1uxs8_J_RvKffDktBjYQ1QxXFvCIWmZqk/view?usp=sharing`)* |
+| **Póster académico** | *(`https://drive.google.com/file/d/1qFbVpaeHMVt0TvZbMh1r6VaYvIWxapzA/view?usp=sharing`)* |
