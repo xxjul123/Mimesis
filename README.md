@@ -155,7 +155,7 @@ Capturado por los integrantes del equipo en distintos escenarios, iluminaciones 
 | **Total** | **111** | **107** | **111** | **329** | **`328 / 329` (`99.7%`)** |
 
 - **Referencias precalculadas en el repositorio:** `backend/data/reference_poses.json` y `backend/data/reference_masks/*.png`.
-- **Enlace al conjunto de datos completo (Google Drive):** *(https://colab.research.google.com/drive/1xsEPI2lBYinq-RvI5hYxxr8hQ5rJaema?usp=sharing)*
+- **Enlace al conjunto de datos completo (Google Drive):** *(`https://colab.research.google.com/drive/1xsEPI2lBYinq-RvI5hYxxr8hQ5rJaema?usp=sharing`)*
 
 ---
 
@@ -242,6 +242,6 @@ Los prototipos visuales iniciales (4 pantallas clave: Sala, Imitación, Comparac
 | Entregable | Ubicación / Enlace |
 | :--- | :--- |
 | **Repositorio GitHub (código, documentación, tests y notebooks)** | Este repositorio (`https://github.com/xxjul123/Mimesis`) |
-| **Conjunto de datos real (329 fotos)** | *(agregar enlace público de Google Drive en la Sección 5)* |
-| **Video demostrativo (máx. 3 minutos)** | *(agregar enlace al video antes de la entrega final)* |
-| **Póster académico** | *(agregar archivo/enlace del póster antes de la entrega final)* |
+| **Conjunto de datos real (329 fotos)** | *(`https://drive.google.com/drive/folders/12ouj1UgLeY2QxBVvt1PexEmZzn9NcmGD?usp=drive_link`)* |
+| **Video demostrativo (máx. 3 minutos)** | *(`https://youtu.be/HbRlDu3siuI`)* |
+| **Póster académico** | *(`https://drive.google.com/file/d/1uxs8_J_RvKffDktBjYQ1QxXFvCIWmZqk/view?usp=sharing`)* |
