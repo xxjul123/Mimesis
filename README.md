@@ -92,6 +92,7 @@ Mimesis/
 │   └── auto_mode.js                              # Motor automático (10s/5s/8s), pausa, Informe Detallado y Web Audio
 ├── assets/sculptures/                            # Fotografías reales de las 3 esculturas de referencia
 ├── Fotos Prueba/                                 # Fotografías reales de prueba para validar sin cámara
+├── Imagenes Preview README/                      # Capturas de pantalla de la interfaz y resultados reales
 ├── backend/
 │   ├── app.py                                    # Servidor FastAPI (/api/health, /api/analysis/pose + estáticos)
 │   ├── pdi.py                                    # Laplaciano, CLAHE LAB, letterboxing y vistas Inspector PDI (960 px)
@@ -185,6 +186,13 @@ Los prototipos visuales iniciales (4 pantallas clave: Sala, Imitación, Comparac
    - Muestra las 5 transformaciones reales (`01 Captura Original`, `02 CLAHE Adaptativo LAB`, `03 Mapa Laplaciano`, `04 Máscara + Contorno`, `05 Modo Escultura`).
    - Al hacer clic en cualquiera de las 5 imágenes se abre un **Lightbox a pantalla completa** sin recortes con navegación `← / →` y teclado (`Esc` para cerrar).
 
+### Evidencias visuales de la interfaz
+
+| Sala principal y configuración (`index.html`) | Galería de la colección de 3 esculturas (`index.html`) |
+| :---: | :---: |
+| ![Sala principal de MIMESIS](Imagenes%20Preview%20README/Inicio_Mimesis.jpg) | ![Colección disponible en MIMESIS](Imagenes%20Preview%20README/Inicio_Mimesis_abajo.jpg) |
+| *Configuración de 2–4 jugadores, selector **Modo Reto / Modo Libre**, ficha museográfica con claves de postura e indicador en vivo `Motor Python · MLP activo`.* | *Selección interactiva entre **Sebastián de Belalcázar**, **El Discóbolo** y **William Shakespeare** e inicio de partida.* |
+
 ### Guía rápida de uso
 1. Inicia el servidor (`python -m uvicorn backend.app:app --reload`) y abre `http://localhost:8000`.
 2. Configura los nombres de los jugadores (2–4), elige **Modo Reto** o **Modo Libre**, selecciona la obra inicial y pulsa **«Iniciar partida →»**.
@@ -211,16 +219,12 @@ Los prototipos visuales iniciales (4 pantallas clave: Sala, Imitación, Comparac
 
 - **Desglose `PoseMLP` en `Test` (`n = 48`, 16 por clase):** Belalcázar `16/16` (`F1 = 0.94`), Discóbolo `15/16` (`F1 = 0.97`), Shakespeare `15/16` (`F1 = 0.97`) — únicamente 2 errores en todo el conjunto de prueba balanceado.
 
-### Pruebas automatizadas y validación funcional (`backend/tests/test_pipeline.py`)
-- **8/8 pruebas aprobadas (`OK` en ~2.5 s)** validando:
-  1. Nitidez Laplaciano y CLAHE adaptativo en canal `L` (`LAB`).
-  2. Letterboxing `640×640` y proyección inversa exacta (`unletterbox_point` y `unletterbox_mask`).
-  3. Segmentación morfológica (`morphologyEx`, `findContours`) + IoU y Momentos de Hu en orientación normal y espejo.
-  4. Generación de las vistas del Inspector PDI (`clahe_view`, `laplacian_view`, `mask_contour_view`, `sculpture_mode_view`).
-  5. `_compute_head_tilt` (vista frontal vs. perfil con oreja oculta) y normalización de los 12 ángulos.
-  6. Invarianza en espejo y clasificación en Modo Reto y Modo Libre.
-  7. **Validación de encuadre y rechazo OOD (`test_body_framing_and_ood_non_pose_rejection`):** rechaza planos cerrados sin rodillas (`422`), posturas neutras de pie, posturas sentadas con baja similitud geométrica y *T-Pose* (evitando falsos positivos por *softmax overconfidence*).
-  8. **Prueba E2E real (`Fotos Prueba/Discobolo/20261015_132054.jpg`):** `PoseMLP` identifica **`discobolo` con `100.0%` de confianza** en Modo Libre, obtiene **`86.1`** en Modo Reto, `IoU = 44.9%`, `Hu = 40.6%` y genera todas las vistas del Inspector PDI.
+### Ejemplos visuales de funcionamiento en ejecución real
+
+| Evaluación de postura, `PoseMLP` y mapa de calor (`game.html`) | Cierre de ronda y ranking acumulado (`game.html`) |
+| :---: | :---: |
+| ![Resultados de evaluación en MIMESIS](Imagenes%20Preview%20README/Mimesis_resultados_obra.jpg) | ![Ranking de partida en MIMESIS](Imagenes%20Preview%20README/Mimesis_ranking.jpg) |
+| *Imitación real de **Sebastián de Belalcázar** (`85 pts`): esqueleto de 15 landmarks, clasificación `PoseMLP` (`100%` Belalcázar) y mapa de calor por región (`Cabeza 74%`, `Torso 67%`, `Brazos 63%`, `Piernas 52%`).* | *Ranking por ronda y acumulado (`#1 Julián 85`, `#2 Sandra 84`) con diagnóstico PDI (`Nitidez 157 Nítida`, `CLAHE LAB`) visible en el panel de evaluación.* |
 
 ### Análisis de resultados
 - **Superioridad de características geométricas + PDI sobre píxeles RGB:** pasar de la CNN RGB (`77.1%` test) a los 12 ángulos normalizados con preprocesamiento PDI (`95.8%` test con `PoseMLP`, `+18.7 pp`) eliminó la dependencia del fondo, vestimenta e iluminación con un modelo de solo `17.7 KB`.
@@ -243,5 +247,5 @@ Los prototipos visuales iniciales (4 pantallas clave: Sala, Imitación, Comparac
 | :--- | :--- |
 | **Repositorio GitHub (código, documentación, tests y notebooks)** | Este repositorio (`https://github.com/xxjul123/Mimesis`) |
 | **Conjunto de datos real (329 fotos)** | *(`https://drive.google.com/drive/folders/12ouj1UgLeY2QxBVvt1PexEmZzn9NcmGD?usp=drive_link`)* |
-| **Video demostrativo (máx. 3 minutos)** | *(`https://youtu.be/HbRlDu3siuI`)* |
+| **Video demostrativo** | *(`https://youtu.be/HbRlDu3siuI`)* |
 | **Póster académico** | *(`https://drive.google.com/file/d/1uxs8_J_RvKffDktBjYQ1QxXFvCIWmZqk/view?usp=sharing`)* |
