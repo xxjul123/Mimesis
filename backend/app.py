@@ -17,14 +17,14 @@ import json
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .evaluator import PoseEvaluator
 from .pdi import generate_pdi_debug_views, preprocess_with_intermediates
-from .pose import PoseExtractor, extract_geometric_features
+from .pose import PoseExtractor, extract_geometric_features, validate_body_framing
 from .segmentation import refine_mask
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -41,6 +41,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def disable_static_dev_cache(request: Request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if path in ("/", "/index.html", "/game.html") or path.startswith(("/js/", "/css/")):
+        response.headers["Cache-Control"] = "no-cache, must-revalidate"
+    return response
 
 # Instancias únicas cargadas al iniciar el servidor
 evaluator = PoseEvaluator()
@@ -114,6 +123,10 @@ async def analyze_pose(
 
     landmarks, mean_vis, raw_mask = extracted
     pdi_metrics["mean_visibility"] = round(mean_vis, 3)
+
+    framing_ok, framing_msg = validate_body_framing(landmarks)
+    if not framing_ok:
+        raise HTTPException(status_code=422, detail=framing_msg)
 
     # 2B. Refinamiento morfológico de la máscara de segmentación (OpenCV)
     clean_mask = refine_mask(raw_mask, threshold=0.45) if raw_mask is not None else None

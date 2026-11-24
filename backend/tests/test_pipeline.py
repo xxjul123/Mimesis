@@ -29,7 +29,12 @@ from backend.pdi import (
     unletterbox_mask,
     unletterbox_point,
 )
-from backend.pose import FEATURE_ORDER, _compute_head_tilt, extract_geometric_features
+from backend.pose import (
+    FEATURE_ORDER,
+    _compute_head_tilt,
+    extract_geometric_features,
+    validate_body_framing,
+)
 from backend.segmentation import compare_silhouettes, extract_main_contour, refine_mask
 
 ROOT = Path(__file__).resolve().parent.parent.parent
@@ -150,6 +155,65 @@ class TestMimesisPipeline(unittest.TestCase):
             self.assertEqual(res_free["predicted_class"], sid)
             self.assertEqual(res_free["sculpture_id"], sid)
             self.assertTrue(res_free["is_recognized"])
+
+    def test_body_framing_and_ood_non_pose_rejection(self):
+        # 1. Encuadre completo válido (rodillas visibles) vs plano cerrado sin piernas
+        full_lms = _make_dummy_landmarks()
+        ok_full, _ = validate_body_framing(full_lms)
+        self.assertTrue(ok_full)
+
+        closeup_lms = _make_dummy_landmarks()
+        for idx in (25, 26, 27, 28):
+            closeup_lms[idx]["visibility"] = 0.05
+            closeup_lms[idx]["y"] = 1.35
+        ok_close, msg_close = validate_body_framing(closeup_lms)
+        self.assertFalse(ok_close)
+        self.assertIn("rodillas", msg_close.lower())
+
+        # 2. Postura neutra parado (brazos caídos sin imitar obra) rechazada en Modo Libre
+        ev = PoseEvaluator()
+        neutral_angles = {
+            "head_tilt": 2.0, "neck_angle": 4.0,
+            "torso_lean": 2.0, "shoulder_level": 2.0,
+            "left_elbow": 170.0, "right_elbow": 170.0,
+            "left_shoulder": 10.0, "right_shoulder": 10.0,
+            "left_hip": 176.0, "right_hip": 176.0,
+            "left_knee": 176.0, "right_knee": 176.0,
+        }
+        res_neutral = ev.evaluate(neutral_angles, game_mode="classify")
+        self.assertFalse(res_neutral["is_recognized"])
+        self.assertEqual(res_neutral["score"], 0.0)
+
+        # 3. Postura sentada / fuera de distribución (geo bajo) rechazada en Modo Libre y sin inflar en Modo Reto
+        seated_angles = {
+            "head_tilt": 15.0, "neck_angle": 18.0,
+            "torso_lean": 12.0, "shoulder_level": 8.0,
+            "left_elbow": 110.0, "right_elbow": 135.0,
+            "left_shoulder": 28.0, "right_shoulder": 35.0,
+            "left_hip": 95.0, "right_hip": 105.0,
+            "left_knee": 95.0, "right_knee": 100.0,
+        }
+        res_seated_free = ev.evaluate(seated_angles, game_mode="classify")
+        self.assertFalse(res_seated_free["is_recognized"])
+        self.assertEqual(res_seated_free["score"], 0.0)
+
+        res_seated_challenge = ev.evaluate(seated_angles, sculpture_id="discobolo", game_mode="challenge")
+        self.assertLess(res_seated_challenge["score"], 45.0)
+
+        # 4. T-Pose (ambos brazos en cruz) rechazada en Modo Libre y sin inflar en Modo Reto
+        tpose_angles = {
+            "head_tilt": 15.0, "neck_angle": 18.0,
+            "torso_lean": 3.0, "shoulder_level": 4.0,
+            "left_elbow": 175.0, "right_elbow": 175.0,
+            "left_shoulder": 92.0, "right_shoulder": 92.0,
+            "left_hip": 174.0, "right_hip": 174.0,
+            "left_knee": 175.0, "right_knee": 175.0,
+        }
+        res_tpose_free = ev.evaluate(tpose_angles, game_mode="classify")
+        self.assertFalse(res_tpose_free["is_recognized"])
+        self.assertEqual(res_tpose_free["score"], 0.0)
+        res_tpose_challenge = ev.evaluate(tpose_angles, sculpture_id="belalcazar", game_mode="challenge")
+        self.assertLess(res_tpose_challenge["score"], 35.0)
 
     def test_fastapi_health_and_real_photo_end_to_end(self):
         body = health()

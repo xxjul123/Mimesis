@@ -198,7 +198,7 @@ def generate_pdi_debug_views(
     img_bgr: np.ndarray,
     enhanced_bgr: np.ndarray,
     mask: Optional[np.ndarray] = None,
-    max_side: int = 440,
+    max_side: int = 960,
 ) -> Dict[str, Optional[str]]:
     """
     Genera vistas livianas (JPEG base64) de las etapas reales del pipeline PDI:

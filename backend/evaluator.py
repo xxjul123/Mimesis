@@ -88,6 +88,28 @@ def _region_scores(angles: Dict[str, float], ref: Dict[str, float]) -> Dict[str,
     return scores
 
 
+def _is_out_of_distribution_pose(angles: Dict[str, float]) -> bool:
+    """
+    Detecta posturas genéricas fuera del repertorio de las 3 esculturas que suelen
+    engañar a un clasificador cerrado con softmax (overconfidence OOD):
+    1. Postura neutra en reposo: de pie erguido con ambos brazos caídos y rectos.
+    2. Postura simétrica con ambos brazos en cruz / levantados (T-Pose, Y-Pose,
+       manos arriba) estando erguido: ninguna de las 3 obras levanta ambos hombros
+       por encima de 65° sin inclinar el torso.
+    """
+    left_sh = float(angles.get("left_shoulder", 0.0))
+    right_sh = float(angles.get("right_shoulder", 0.0))
+    min_shoulder = min(left_sh, right_sh)
+    max_shoulder = max(left_sh, right_sh)
+    min_elbow = min(float(angles.get("left_elbow", 180.0)), float(angles.get("right_elbow", 180.0)))
+    torso_lean = float(angles.get("torso_lean", 0.0))
+    min_knee = min(float(angles.get("left_knee", 180.0)), float(angles.get("right_knee", 180.0)))
+
+    is_neutral = max_shoulder < 20.0 and min_elbow > 150.0 and torso_lean < 12.0 and min_knee > 160.0
+    is_both_arms_raised_upright = min_shoulder >= 65.0 and torso_lean < 20.0
+    return is_neutral or is_both_arms_raised_upright
+
+
 def _weighted_total(regions: Dict[str, float]) -> float:
     return sum(regions[r] * REGION_WEIGHTS[r] for r in REGION_WEIGHTS)
 
@@ -96,8 +118,9 @@ def _build_feedback(regions: Dict[str, float], score: float) -> str:
     labels = {"head": "la cabeza", "torso": "el torso", "arms": "los brazos", "legs": "las piernas"}
     weakest = min(regions, key=lambda r: regions[r])
     strongest = max(regions, key=lambda r: regions[r])
+    verb = "coinciden" if strongest in ("arms", "legs") else "coincide"
     if score >= 85:
-        return f"Excelente imitación: {labels[strongest]} coinciden casi exacto con la escultura."
+        return f"Excelente imitación: {labels[strongest]} {verb} casi exacto con la escultura."
     if score >= 60:
         return f"Buena postura general. Para subir tu puntaje, ajusta un poco más {labels[weakest]}."
     return f"Aún hay diferencia notable en {labels[weakest]}. Observa la obra de referencia e inténtalo de nuevo."
@@ -235,20 +258,34 @@ class PoseEvaluator:
         geo_score = geo_by_class[target_sid]
         target_mlp_prob = mlp_probs.get(target_sid) if mlp_probs is not None else None
 
+        is_ood = _is_out_of_distribution_pose(angles)
+
         if target_mlp_prob is not None:
-            final_score = 0.60 * (target_mlp_prob * 100.0) + 0.40 * geo_score
+            # Compuerta geométrica: mantiene 100% el peso MLP en poses válidas (geo >= 60),
+            # pero evita que un softmax sobreconfiado infle el puntaje cuando la geometría real es baja
+            # o la postura es claramente fuera de distribución (neutra / T-Pose / brazos arriba).
+            geo_gate = 0.0 if is_ood else float(np.clip((geo_score - 25.0) / 35.0, 0.0, 1.0))
+            gated_mlp = (target_mlp_prob * 100.0) * geo_gate
+            final_score = 0.60 * gated_mlp + 0.40 * geo_score
         else:
             final_score = geo_score
 
         final_score = round(float(np.clip(final_score, 0.0, 100.0)), 1)
 
-        # Detección de postura fuera de distribución (Modo Libre)
+        # Detección de postura fuera de distribución (Modo Libre):
+        # rechaza poses con geometría pobre (evita overconfidence OOD del softmax)
+        # o posturas neutras / en cruz / ambos brazos arriba.
         is_recognized = True
-        if is_classify and predicted_conf < 45.0 and geo_score < 45.0:
+        if is_classify and (
+            geo_score < 50.0
+            or (predicted_conf < 55.0 and geo_score < 60.0)
+            or is_ood
+        ):
             is_recognized = False
+            final_score = 0.0
             feedback = (
                 "Postura no reconocida: tu pose no coincide claramente con ninguna de las 3 esculturas. "
-                "Elige una obra de referencia e intenta imitarla de cuerpo completo."
+                "Aléjate para mostrar el cuerpo completo e imita el gesto de una obra."
             )
         else:
             feedback = _build_feedback(regions, final_score)

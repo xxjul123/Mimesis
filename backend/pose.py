@@ -110,6 +110,39 @@ def _compute_head_tilt(landmarks: List[Dict[str, float]], pts: np.ndarray) -> fl
     return _line_angle_horizontal(pts[best_ear], pts[0])
 
 
+def validate_body_framing(
+    landmarks: List[Dict[str, float]],
+    min_vis: float = 0.35,
+) -> Tuple[bool, str]:
+    """
+    Verifica que la persona esté encuadrada suficientemente (tronco + brazos +
+    al menos una cadera y una rodilla dentro del cuadro) para evitar evaluar
+    planos cerrados de pecho/rostro donde BlazePose inventa piernas fuera de vista.
+    """
+    if not landmarks or len(landmarks) < 29:
+        return False, "No se detectó una persona completa en la fotografía. Aléjate un poco de la cámara e intenta de nuevo."
+
+    def _visible_in_frame(idx: int) -> bool:
+        lm = landmarks[idx]
+        vis = float(lm.get("visibility", 0.0))
+        x = float(lm.get("x", -1.0))
+        y = float(lm.get("y", -1.0))
+        return vis >= min_vis and -0.06 <= x <= 1.06 and -0.06 <= y <= 1.03
+
+    has_head = _visible_in_frame(0)
+    has_shoulders = _visible_in_frame(11) and _visible_in_frame(12)
+    has_arm = (_visible_in_frame(13) or _visible_in_frame(14)) and (_visible_in_frame(15) or _visible_in_frame(16))
+    has_hip = _visible_in_frame(23) or _visible_in_frame(24)
+    has_knee = _visible_in_frame(25) or _visible_in_frame(26)
+
+    if not (has_head and has_shoulders and has_arm):
+        return False, "No se distinguen claramente cabeza, hombros y brazos. Asegúrate de estar frente a la cámara con buena luz."
+    if not (has_hip and has_knee):
+        return False, "No se ve tu cuerpo completo (faltan caderas o rodillas en el encuadre). Aléjate un poco de la cámara e intenta de nuevo."
+
+    return True, ""
+
+
 def extract_geometric_features(landmarks: List[Dict[str, float]]) -> Tuple[Dict[str, float], np.ndarray]:
     """
     Convierte los 33 landmarks normalizados en:

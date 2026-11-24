@@ -6,9 +6,10 @@
     <meta name="theme-color" content="#12110f">
     <title>MIMESIS · Partida</title>
 
-    <link rel="stylesheet" href="css/styles.css">
-    <link rel="stylesheet" href="css/layout.css">
-    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/styles.css?v=20261124">
+    <link rel="stylesheet" href="css/layout.css?v=20261124">
+    <link rel="stylesheet" href="css/components.css?v=20261124">
+    <link rel="stylesheet" href="css/auto_mode.css?v=20261124">
 </head>
 <body>
 
@@ -89,6 +90,9 @@
             <div class="camera-actions">
                 <button type="button" class="btn" id="camera-btn">Activar cámara</button>
                 <button type="button" class="btn btn-primary" id="capture-btn" disabled>Tomar foto (3s)</button>
+                <button type="button" class="btn btn-accent-outline" id="open-auto-mode-btn" title="Abrir cámara a pantalla completa con flujo automático por las 3 obras">
+                    ⛶ Pantalla completa automática
+                </button>
                 <label class="btn btn-ghost" for="upload-input">
                     Subir foto de prueba
                     <input type="file" id="upload-input" accept="image/*" hidden>
@@ -260,13 +264,299 @@
     </footer>
 </main>
 
+<!-- ESCENARIO MODO AUTOMÁTICO EN PANTALLA COMPLETA -->
+<div class="auto-stage" id="auto-stage" role="dialog" aria-modal="true" aria-label="Modo automático en pantalla completa" hidden>
+    <div class="auto-video-wrap">
+        <video id="auto-video" autoplay playsinline muted></video>
+        <div class="auto-video-placeholder" id="auto-video-placeholder" hidden>
+            <div class="spinner"></div>
+            <span>Conectando cámara…</span>
+        </div>
+    </div>
+
+    <div class="auto-flash" id="auto-flash" aria-hidden="true"></div>
+
+    <!-- Barra superior delgada (nombre del jugador arriba sin tapar el encuadre) -->
+    <header class="auto-top-bar" id="auto-top-bar">
+        <div class="auto-top-left">
+            <span class="auto-round-pill" id="auto-round-pill">Ronda 1 / 3</span>
+            <span class="auto-sculpture-pill" id="auto-sculpture-pill">Sebastián de Belalcázar</span>
+        </div>
+
+        <div class="auto-top-center">
+            <div class="auto-player-banner" id="auto-player-banner">
+                <span class="auto-player-avatar" id="auto-player-avatar">J</span>
+                <div class="auto-player-copy">
+                    <small id="auto-player-role">Turno actual</small>
+                    <strong id="auto-player-name">Jugador 1</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="auto-top-right">
+            <button type="button" class="auto-icon-btn active" id="auto-sound-btn" title="Activar o silenciar sonidos guía">
+                🔊 Sonido
+            </button>
+            <button type="button" class="auto-icon-btn" id="auto-fullscreen-btn" title="Alternar pantalla completa del navegador">
+                ⛶ Pantalla
+            </button>
+            <button type="button" class="auto-icon-btn auto-exit-btn" id="auto-exit-btn" title="Salir del modo automático">
+                Salir ✕
+            </button>
+        </div>
+    </header>
+
+    <!-- Referencia de escultura (esquina inferior derecha, fuera del centro) -->
+    <aside class="auto-reference-dock" id="auto-reference-dock" hidden>
+        <div class="auto-ref-header">
+            <span class="auto-ref-eyebrow" id="auto-ref-eyebrow">Imita esta obra</span>
+            <strong id="auto-ref-title">Sebastián de Belalcázar</strong>
+        </div>
+        <div class="auto-ref-challenge" id="auto-ref-challenge">
+            <div class="auto-ref-img-wrap">
+                <img id="auto-ref-img" alt="Escultura a imitar">
+            </div>
+            <p class="auto-ref-tip" id="auto-ref-tip"></p>
+        </div>
+        <div class="auto-ref-free" id="auto-ref-free" hidden></div>
+    </aside>
+
+    <!-- Temporizador 10s (esquina inferior izquierda, fuera del centro) -->
+    <div class="auto-timer-dock" id="auto-timer-dock" hidden>
+        <div class="auto-timer-ring-wrap">
+            <svg class="auto-timer-svg" viewBox="0 0 84 84" aria-hidden="true">
+                <circle class="auto-timer-track" cx="42" cy="42" r="36"></circle>
+                <circle class="auto-timer-arc" id="auto-timer-ring" cx="42" cy="42" r="36"></circle>
+            </svg>
+            <span class="auto-timer-number" id="auto-timer-number">10</span>
+        </div>
+        <div class="auto-timer-meta">
+            <strong id="auto-timer-label">Acomódate en pose</strong>
+            <span id="auto-timer-sub">Foto automática al llegar a 0</span>
+        </div>
+    </div>
+
+    <!-- Barra inferior previa al inicio -->
+    <div class="auto-idle-bar" id="auto-idle-bar">
+        <div class="auto-idle-summary">
+            <strong id="auto-idle-title">Modo automático · 3 obras consecutivas</strong>
+            <span id="auto-idle-players">Participantes: Jugador 1, Jugador 2</span>
+        </div>
+        <div class="auto-idle-controls">
+            <label class="auto-select-wrap" for="auto-camera-select">
+                <span>Cámara</span>
+                <select id="auto-camera-select" class="camera-select" aria-label="Seleccionar cámara en pantalla completa"></select>
+            </label>
+            <button type="button" class="btn btn-ghost btn-sm" id="auto-rotate-btn">Rotar 0°</button>
+            <button type="button" class="btn btn-ghost btn-sm active" id="auto-mirror-btn">Espejo: Sí</button>
+            <button type="button" class="btn btn-primary auto-start-btn" id="auto-start-btn">
+                ▶ Iniciar partida automática
+            </button>
+        </div>
+    </div>
+
+    <!-- Transición de cambio de jugador (5 segundos) -->
+    <div class="auto-overlay" id="auto-swap-overlay" hidden>
+        <div class="auto-swap-card">
+            <span class="auto-swap-badge" id="auto-swap-captured">✓ Foto capturada</span>
+            <h2 id="auto-swap-title">Cambio de jugador</h2>
+            <p class="auto-swap-instruction" id="auto-swap-instruction">
+                Por favor, sal del encuadre de la foto y pasa la siguiente persona.
+            </p>
+            <div class="auto-swap-next-pill">
+                <span class="auto-player-avatar lg" id="auto-swap-next-avatar">J</span>
+                <div>
+                    <small>Siguiente turno</small>
+                    <strong id="auto-swap-next-name">Jugador 2</strong>
+                </div>
+            </div>
+            <div class="auto-swap-countdown">
+                <span id="auto-swap-seconds">5</span>
+                <small>segundos para cambiar de lugar</small>
+            </div>
+            <div class="auto-progress-bar">
+                <div class="auto-progress-fill" id="auto-swap-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Procesamiento breve si aún termina la última evaluación -->
+    <div class="auto-overlay" id="auto-analyzing-overlay" hidden>
+        <div class="auto-analyzing-card">
+            <div class="spinner auto-spinner-lg"></div>
+            <h3 id="auto-analyzing-title">Evaluando posturas de la ronda…</h3>
+            <p>Ejecutando preprocesamiento PDI, BlazePose, segmentación y clasificación en Python.</p>
+        </div>
+    </div>
+
+    <!-- Resultados de la ronda (8 segundos automáticos con Pausa e Informe Detallado) -->
+    <div class="auto-overlay auto-results-overlay" id="auto-results-overlay" hidden>
+        <div class="auto-results-shell">
+            <div class="auto-results-header">
+                <div>
+                    <span class="eyebrow" id="auto-results-eyebrow">Resultados · Ronda 1 de 3</span>
+                    <h2 id="auto-results-title">Sebastián de Belalcázar</h2>
+                </div>
+                <div class="auto-results-standings" id="auto-results-standings" aria-label="Puntaje acumulado"></div>
+            </div>
+
+            <div class="auto-results-grid" id="auto-results-grid"></div>
+
+            <div class="auto-results-footer">
+                <div class="auto-results-timer-col">
+                    <div class="auto-results-timer-text">
+                        <span id="auto-results-next-label">Siguiente escultura en 8s…</span>
+                        <strong id="auto-results-state-tag">Automático</strong>
+                    </div>
+                    <div class="auto-progress-bar">
+                        <div class="auto-progress-fill" id="auto-results-bar"></div>
+                    </div>
+                </div>
+                <div class="auto-results-actions">
+                    <button type="button" class="btn btn-ghost" id="auto-results-pause-btn">⏸ Pausar</button>
+                    <button type="button" class="btn" id="auto-results-detail-btn">Ver informe detallado</button>
+                    <button type="button" class="btn btn-primary" id="auto-results-next-btn">Siguiente ahora →</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Podio Final (al completar las 3 obras) -->
+    <div class="auto-overlay auto-final-overlay" id="auto-final-overlay" hidden>
+        <div class="auto-final-card">
+            <span class="eyebrow">Partida automática completada · 3 obras</span>
+            <h2 id="auto-final-winner">¡Partida finalizada!</h2>
+            <p id="auto-final-subtitle"></p>
+
+            <div class="auto-final-table-wrap">
+                <table class="ranking-table auto-final-table">
+                    <thead id="auto-final-thead"></thead>
+                    <tbody id="auto-final-tbody"></tbody>
+                </table>
+            </div>
+
+            <div class="auto-final-rounds" id="auto-final-rounds"></div>
+
+            <div class="auto-final-actions">
+                <button type="button" class="btn btn-primary" id="auto-play-again-btn">↻ Jugar otra vez</button>
+                <button type="button" class="btn" id="auto-back-normal-btn">Volver al modo normal</button>
+                <button type="button" class="btn btn-ghost" id="auto-back-lobby-btn">Volver a la sala</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL INFORME DETALLADO (MODO AUTOMÁTICO) -->
+<div class="modal-backdrop detail-modal-backdrop" id="detail-report-modal" role="dialog" aria-modal="true" aria-labelledby="detail-title">
+    <div class="modal-card detail-modal-card">
+        <div class="detail-modal-head">
+            <div>
+                <span class="eyebrow" id="detail-eyebrow">Informe detallado · Ronda 1</span>
+                <h3 id="detail-title">Sebastián de Belalcázar</h3>
+                <p id="detail-subtitle" style="font-size:13px;color:var(--muted);"></p>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm" id="detail-close-x" aria-label="Cerrar informe">✕</button>
+        </div>
+
+        <div class="detail-player-tabs" id="detail-player-tabs" role="tablist" aria-label="Seleccionar jugador"></div>
+
+        <div class="result-banner detail-error-banner" id="detail-error-banner" hidden></div>
+
+        <div id="detail-content">
+            <div class="results-compare-grid">
+                <div class="visual-card">
+                    <div class="visual-card-head">
+                        <h4>Tu pose</h4>
+                        <div class="view-mode-bar" role="group" aria-label="Modo de visualización de la pose">
+                            <button type="button" class="view-pill detail-view-pill active" data-view="segments">Segmentos</button>
+                            <button type="button" class="view-pill detail-view-pill" data-view="heatmap">Mapa de calor</button>
+                            <button type="button" class="view-pill detail-view-pill" data-view="sculpture" id="detail-sculpture-view-btn">Escultura</button>
+                        </div>
+                    </div>
+                    <div class="visual-stage" id="detail-player-stage">
+                        <div class="visual-placeholder">Sin imagen evaluada.</div>
+                    </div>
+                </div>
+                <div class="visual-card">
+                    <div class="visual-card-head">
+                        <h4 id="detail-ref-stage-title">Escultura de referencia · Esqueleto base</h4>
+                    </div>
+                    <div class="visual-stage" id="detail-ref-stage">
+                        <div class="visual-placeholder">Obra de referencia.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="score-summary">
+                <div class="score-ring" id="detail-score-value">—</div>
+                <div>
+                    <strong id="detail-score-title" style="display:block;font-size:16px;">Sin evaluar</strong>
+                    <p id="detail-score-description" style="font-size:13px;margin-top:4px;"></p>
+                </div>
+            </div>
+
+            <div class="classifier-section">
+                <div class="classifier-head">
+                    <h4>Clasificación automática de obra</h4>
+                    <span class="classifier-prediction" id="detail-classifier-prediction">Sin evaluar</span>
+                </div>
+                <div id="detail-classifier-probs"></div>
+            </div>
+
+            <div class="heatmap-section">
+                <h4>Mapa de calor · Similitud por región corporal</h4>
+                <div id="detail-heatmap-regions"></div>
+            </div>
+
+            <div class="pdi-header-row">
+                <h4>Diagnóstico PDI y Segmentación</h4>
+                <button type="button" class="btn btn-primary btn-sm" id="detail-open-pdi-btn" disabled>
+                    Ver informe PDI
+                </button>
+            </div>
+
+            <div class="pdi-diagnostics grid-5" aria-label="Métricas PDI y segmentación del jugador">
+                <div class="pdi-metric">
+                    <small>Nitidez (Laplaciano)</small>
+                    <strong id="detail-pdi-sharpness">—</strong>
+                </div>
+                <div class="pdi-metric">
+                    <small>Mejora CLAHE (LAB)</small>
+                    <strong id="detail-pdi-clahe">—</strong>
+                </div>
+                <div class="pdi-metric">
+                    <small>Confianza BlazePose</small>
+                    <strong id="detail-pdi-confidence">—</strong>
+                </div>
+                <div class="pdi-metric">
+                    <small>Silueta IoU (diag.)</small>
+                    <strong id="detail-pdi-iou">—</strong>
+                </div>
+                <div class="pdi-metric">
+                    <small>Momentos de Hu</small>
+                    <strong id="detail-pdi-hu">—</strong>
+                </div>
+            </div>
+
+            <div class="plaque-tips" style="margin-top:18px;">
+                <span class="plaque-label">Contexto cultural</span>
+                <p id="detail-cultural-description" style="font-size:13px;margin-top:6px;"></p>
+            </div>
+        </div>
+
+        <div class="modal-actions" style="margin-top:18px;">
+            <button type="button" class="btn btn-primary" id="detail-close-btn">Cerrar informe</button>
+        </div>
+    </div>
+</div>
+
 <!-- MODAL INSPECTOR PIPELINE PDI -->
-<div class="modal-backdrop" id="inspector-modal" role="dialog" aria-modal="true" aria-labelledby="inspector-title">
+<div class="modal-backdrop inspector-modal-backdrop" id="inspector-modal" role="dialog" aria-modal="true" aria-labelledby="inspector-title">
     <div class="modal-card inspector-modal-card">
         <span class="eyebrow">Evidencia técnica · OpenCV + MediaPipe + ML</span>
         <h3 id="inspector-title">Inspector del Pipeline PDI</h3>
         <p style="font-size:13px;color:var(--muted);margin-bottom:4px;">
-            Transformaciones aplicadas en tiempo real sobre la fotografía capturada antes y después de la estimación de pose.
+            Transformaciones aplicadas en tiempo real sobre la fotografía capturada antes y después de la estimación de pose. Haz clic en cualquier imagen para verla completa.
         </p>
 
         <div class="inspector-grid" id="inspector-grid"></div>
@@ -274,6 +564,29 @@
         <div class="modal-actions">
             <button type="button" class="btn btn-primary" id="close-inspector-btn">Cerrar inspector</button>
         </div>
+    </div>
+</div>
+
+<!-- VISOR LIGHTBOX IMAGEN COMPLETA DEL PIPELINE PDI (MODO NORMAL Y PANTALLA COMPLETA) -->
+<div class="pdi-lightbox" id="pdi-lightbox" role="dialog" aria-modal="true" aria-labelledby="pdi-lightbox-title">
+    <div class="pdi-lightbox-bar">
+        <div class="pdi-lightbox-meta">
+            <span class="pdi-lightbox-counter" id="pdi-lightbox-counter">1 / 5</span>
+            <strong id="pdi-lightbox-title">01 · Captura Original</strong>
+        </div>
+        <button type="button" class="pdi-lightbox-close" id="pdi-lightbox-close" aria-label="Cerrar imagen completa">✕</button>
+    </div>
+
+    <div class="pdi-lightbox-stage">
+        <button type="button" class="pdi-lightbox-nav prev" id="pdi-lightbox-prev" aria-label="Imagen anterior">‹</button>
+        <div class="pdi-lightbox-img-wrap">
+            <img id="pdi-lightbox-img" alt="Imagen completa del Pipeline PDI">
+        </div>
+        <button type="button" class="pdi-lightbox-nav next" id="pdi-lightbox-next" aria-label="Imagen siguiente">›</button>
+    </div>
+
+    <div class="pdi-lightbox-caption">
+        <p id="pdi-lightbox-desc"></p>
     </div>
 </div>
 
@@ -306,7 +619,8 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <canvas id="capture-canvas" hidden></canvas>
 
-<script src="js/sculptures.js"></script>
-<script src="js/game.js"></script>
+<script src="js/sculptures.js?v=20261124"></script>
+<script src="js/game.js?v=20261124"></script>
+<script src="js/auto_mode.js?v=20261124"></script>
 </body>
 </html>

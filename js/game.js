@@ -332,6 +332,7 @@
                 selectedDeviceId = cameras[0].deviceId;
                 select.value = selectedDeviceId;
             }
+            document.dispatchEvent(new CustomEvent("mimesis:camerasupdated"));
         } catch {
             // Ignorar si el navegador aún no permite enumerar dispositivos
         }
@@ -447,32 +448,46 @@
         $("result-panel").scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
 
-    function takeSnapshot() {
-        const video = $("camera-video");
-        if (!video.videoWidth || !video.videoHeight) {
+    function captureSnapshotFromVideo(video) {
+        return new Promise((resolve) => {
+            if (!video || !video.videoWidth || !video.videoHeight) {
+                resolve(null);
+                return;
+            }
+
+            const vw = video.videoWidth;
+            const vh = video.videoHeight;
+            const swapped = cameraRotation === 90 || cameraRotation === 270;
+            const canvas = $("capture-canvas");
+            canvas.width = swapped ? vh : vw;
+            canvas.height = swapped ? vw : vh;
+
+            const ctx = canvas.getContext("2d");
+            ctx.save();
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            if (mirrorCamera) ctx.scale(-1, 1);
+            if (cameraRotation !== 0) ctx.rotate((cameraRotation * Math.PI) / 180);
+            ctx.drawImage(video, -vw / 2, -vh / 2, vw, vh);
+            ctx.restore();
+
+            const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+            canvas.toBlob(
+                (blob) => resolve(blob ? { dataUrl, blob } : null),
+                "image/jpeg",
+                0.92
+            );
+        });
+    }
+
+    async function takeSnapshot() {
+        const result = await captureSnapshotFromVideo($("camera-video"));
+        if (!result) {
             notify("La cámara aún está iniciando. Intenta de nuevo.");
             $("capture-btn").disabled = false;
             $("camera-btn").disabled = false;
             return;
         }
-
-        const vw = video.videoWidth;
-        const vh = video.videoHeight;
-        const swapped = cameraRotation === 90 || cameraRotation === 270;
-        const canvas = $("capture-canvas");
-        canvas.width = swapped ? vh : vw;
-        canvas.height = swapped ? vw : vh;
-
-        const ctx = canvas.getContext("2d");
-        ctx.save();
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-        if (mirrorCamera) ctx.scale(-1, 1);
-        if (cameraRotation !== 0) ctx.rotate((cameraRotation * Math.PI) / 180);
-        ctx.drawImage(video, -vw / 2, -vh / 2, vw, vh);
-        ctx.restore();
-
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
-        canvas.toBlob((blob) => showCapturedImage(dataUrl, blob), "image/jpeg", 0.92);
+        showCapturedImage(result.dataUrl, result.blob);
     }
 
     function handleUpload(event) {
@@ -766,9 +781,9 @@
         img.src = imageUrl;
     }
 
-    function renderHeatmap(regions) {
+    function renderHeatmapTo(host, regions) {
+        if (!host) return;
         const labels = { head: "Cabeza", torso: "Torso", arms: "Brazos", legs: "Piernas" };
-        const host = $("heatmap-regions");
         host.innerHTML = "";
 
         Object.entries(labels).forEach(([key, label]) => {
@@ -798,9 +813,11 @@
         });
     }
 
-    function renderClassifierProbs(data) {
-        const predEl = $("classifier-prediction");
-        const host = $("classifier-probs");
+    function renderHeatmap(regions) {
+        renderHeatmapTo($("heatmap-regions"), regions);
+    }
+
+    function renderClassifierProbsTo(predEl, host, data) {
         if (!predEl || !host) return;
         host.innerHTML = "";
 
@@ -849,6 +866,10 @@
             row.append(name, track, num);
             host.appendChild(row);
         });
+    }
+
+    function renderClassifierProbs(data) {
+        renderClassifierProbsTo($("classifier-prediction"), $("classifier-probs"), data);
     }
 
     function renderPdiDiagnostics(pdi, silhouette) {
@@ -900,20 +921,64 @@
         }
     }
 
-    function openInspectorModal() {
-        if (!lastAnalysis?.debug_views) return;
+    let pdiLightboxSteps = [];
+    let pdiLightboxIndex = 0;
+
+    function notifyModalChange() {
+        document.dispatchEvent(new CustomEvent("mimesis:modalchange"));
+    }
+
+    function renderPdiLightbox() {
+        const step = pdiLightboxSteps[pdiLightboxIndex];
+        if (!step) return;
+        $("pdi-lightbox-counter").textContent = `${pdiLightboxIndex + 1} / ${pdiLightboxSteps.length}`;
+        $("pdi-lightbox-title").textContent = step.title;
+        $("pdi-lightbox-img").src = step.src;
+        $("pdi-lightbox-img").alt = step.title;
+        $("pdi-lightbox-desc").textContent = step.desc || "";
+        $("pdi-lightbox-prev").disabled = pdiLightboxIndex <= 0;
+        $("pdi-lightbox-next").disabled = pdiLightboxIndex >= pdiLightboxSteps.length - 1;
+    }
+
+    function openPdiLightbox(steps, index = 0) {
+        if (!Array.isArray(steps) || !steps.length) return;
+        pdiLightboxSteps = steps;
+        pdiLightboxIndex = Math.max(0, Math.min(steps.length - 1, index));
+        renderPdiLightbox();
+        $("pdi-lightbox")?.classList.add("open");
+        notifyModalChange();
+    }
+
+    function closePdiLightbox() {
+        const lb = $("pdi-lightbox");
+        if (!lb?.classList.contains("open")) return;
+        lb.classList.remove("open");
+        notifyModalChange();
+    }
+
+    function closeInspectorModal() {
+        const modal = $("inspector-modal");
+        if (!modal?.classList.contains("open")) return;
+        modal.classList.remove("open");
+        notifyModalChange();
+    }
+
+    function openInspectorModal(analysisData = lastAnalysis, capturedImageUrl = null) {
+        const target = analysisData || lastAnalysis;
+        if (!target?.debug_views) return;
         const grid = $("inspector-grid");
         if (!grid) return;
         grid.innerHTML = "";
 
-        const views = lastAnalysis.debug_views;
-        const pdi = lastAnalysis.pdi_metrics || {};
-        const sil = lastAnalysis.silhouette_metrics || null;
+        const views = target.debug_views;
+        const pdi = target.pdi_metrics || {};
+        const sil = target.silhouette_metrics || null;
+        const origSrc = capturedImageUrl || $("captured-image")?.src || "";
 
-        const steps = [
+        const rawSteps = [
             {
                 title: "01 · Captura Original",
-                src: $("captured-image").src,
+                src: origSrc,
                 desc: `Resolución original ${pdi.orig_size ? `${pdi.orig_size[0]}×${pdi.orig_size[1]}` : ""}.`
             },
             {
@@ -942,17 +1007,24 @@
             }
         ];
 
-        steps.forEach((step) => {
-            if (!step.src) return;
+        const availableSteps = rawSteps.filter((step) => Boolean(step.src));
+
+        availableSteps.forEach((step, idx) => {
             const card = document.createElement("article");
-            card.className = "inspector-step";
+            card.className = "inspector-step clickable";
+            card.tabIndex = 0;
+            card.setAttribute("role", "button");
+            card.setAttribute("aria-label", `Abrir imagen completa: ${step.title}`);
 
             const imgWrap = document.createElement("div");
             imgWrap.className = "inspector-step-img";
             const img = document.createElement("img");
             img.src = step.src;
             img.alt = step.title;
-            imgWrap.appendChild(img);
+            const badge = document.createElement("span");
+            badge.className = "inspector-zoom-badge";
+            badge.textContent = "🔍 Ampliar";
+            imgWrap.append(img, badge);
 
             const body = document.createElement("div");
             body.className = "inspector-step-body";
@@ -963,10 +1035,18 @@
             body.append(title, desc);
 
             card.append(imgWrap, body);
+            card.addEventListener("click", () => openPdiLightbox(availableSteps, idx));
+            card.addEventListener("keydown", (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    openPdiLightbox(availableSteps, idx);
+                }
+            });
             grid.appendChild(card);
         });
 
         $("inspector-modal").classList.add("open");
+        notifyModalChange();
     }
 
     function applyAnalysisResult(data) {
@@ -1184,13 +1264,51 @@
         });
     });
 
-    $("open-inspector-btn")?.addEventListener("click", openInspectorModal);
-    $("close-inspector-btn")?.addEventListener("click", () => {
-        $("inspector-modal")?.classList.remove("open");
-    });
+    $("open-inspector-btn")?.addEventListener("click", () => openInspectorModal());
+    $("close-inspector-btn")?.addEventListener("click", closeInspectorModal);
     $("inspector-modal")?.addEventListener("click", (e) => {
         if (e.target === $("inspector-modal")) {
-            $("inspector-modal").classList.remove("open");
+            closeInspectorModal();
+        }
+    });
+
+    $("pdi-lightbox-close")?.addEventListener("click", closePdiLightbox);
+    $("pdi-lightbox-prev")?.addEventListener("click", () => {
+        if (pdiLightboxIndex > 0) {
+            pdiLightboxIndex -= 1;
+            renderPdiLightbox();
+        }
+    });
+    $("pdi-lightbox-next")?.addEventListener("click", () => {
+        if (pdiLightboxIndex < pdiLightboxSteps.length - 1) {
+            pdiLightboxIndex += 1;
+            renderPdiLightbox();
+        }
+    });
+    $("pdi-lightbox")?.addEventListener("click", (e) => {
+        if (e.target === $("pdi-lightbox") || e.target.classList.contains("pdi-lightbox-stage") || e.target.classList.contains("pdi-lightbox-img-wrap")) {
+            closePdiLightbox();
+        }
+    });
+    document.addEventListener("keydown", (e) => {
+        if ($("pdi-lightbox")?.classList.contains("open")) {
+            if (e.key === "Escape") {
+                e.preventDefault();
+                closePdiLightbox();
+            } else if (e.key === "ArrowLeft" && pdiLightboxIndex > 0) {
+                e.preventDefault();
+                pdiLightboxIndex -= 1;
+                renderPdiLightbox();
+            } else if (e.key === "ArrowRight" && pdiLightboxIndex < pdiLightboxSteps.length - 1) {
+                e.preventDefault();
+                pdiLightboxIndex += 1;
+                renderPdiLightbox();
+            }
+            return;
+        }
+        if (e.key === "Escape" && $("inspector-modal")?.classList.contains("open")) {
+            e.preventDefault();
+            closeInspectorModal();
         }
     });
     $("camera-btn").addEventListener("click", () => (stream ? stopCamera() : startCamera()));
@@ -1227,6 +1345,50 @@
         window.location.href = "index.html";
     });
     window.addEventListener("beforeunload", stopCamera);
+
+    /* Puente compartido para el Modo Automático en Pantalla Completa (js/auto_mode.js) */
+    window.MimesisGameBridge = {
+        ANALYSIS_ENDPOINT,
+        sculptures,
+        getGameState: () => game,
+        saveState,
+        renderGame,
+        notify,
+        scoreTier,
+        drawPoseOverlay,
+        renderHeatmapTo,
+        renderClassifierProbsTo,
+        openInspectorModal,
+        closeInspectorModal,
+        closePdiLightbox,
+        isInspectorOrLightboxOpen: () =>
+            Boolean($("inspector-modal")?.classList.contains("open") || $("pdi-lightbox")?.classList.contains("open")),
+        getStream: () => stream,
+        ensureCameraStarted: async () => {
+            if (stream) return stream;
+            await startCamera();
+            return stream;
+        },
+        startCamera,
+        stopCamera,
+        refreshCameraList,
+        getCameraSettings: () => ({
+            deviceId: selectedDeviceId,
+            rotation: cameraRotation,
+            mirror: mirrorCamera
+        }),
+        rotateCamera: () => {
+            cameraRotation = (cameraRotation + 90) % 360;
+            updateVideoTransform();
+            return cameraRotation;
+        },
+        toggleMirror: () => {
+            mirrorCamera = !mirrorCamera;
+            updateVideoTransform();
+            return mirrorCamera;
+        },
+        captureSnapshotFromVideo
+    };
 
     renderGame();
     checkBackend();
